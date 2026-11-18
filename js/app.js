@@ -7,7 +7,7 @@ const fs = firebase.firestore();
 const rtdb = firebase.database();
 const FV = firebase.firestore.FieldValue;
 
-const START_POINTS = 150;
+const START_POINTS = 0;
 const PACK_COST = 50;
 const SKIN_PACK_COST = 100;
 const TRADE_COST = 5;
