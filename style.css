@@ -1,0 +1,102 @@
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #14161c; color: #e8e8ee; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  h1 { margin: 18px 0 6px; letter-spacing: 2px; }
+  input, button { font-size: 16px; padding: 10px 12px; border-radius: 8px; border: 1px solid #333846; background: #12141a; color: #fff; }
+  button { background: #2e7dff; border: none; cursor: pointer; font-weight: 600; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { background: #444; cursor: default; filter: none; }
+  #game { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 30px; }
+  canvas { background: #1b1e26; border-radius: 12px; max-width: 96vw; height: auto; cursor: crosshair; }
+  #bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  #controls { font-size: 14px; color: #aab; text-align: center; max-width: 960px; line-height: 1.6; }
+  kbd { background: #2a2e3a; border-radius: 4px; padding: 1px 6px; border: 1px solid #3a3f4e; font-size: 13px; }
+  #panels { display: flex; gap: 10px; width: 960px; max-width: 96vw; flex-wrap: wrap; }
+  .panel { flex: 1; min-width: 280px; background: #1e2129; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .panel h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8a90a2; }
+  .ab { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
+  .ab.off { opacity: .4; }
+  .ab .why { color: #8a90a2; font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #2a2e3a; color: #aab; margin-left: 4px; }
+  #log { font-size: 14px; width: 960px; max-width: 96vw; min-height: 90px; background: #1e2129; border-radius: 8px; padding: 8px 12px; }
+  #log div { padding: 2px 0; }
+  .err { color: #ff7676; font-size: 14px; }
+  #rulePanel { display: none; position: fixed; inset: 0; background: #000b; z-index: 10; align-items: center; justify-content: center; }
+  #rulePanel .box { background: #1e2129; border-radius: 12px; padding: 20px; width: 760px; max-width: 96vw; max-height: 90vh; overflow: auto; }
+  #rulePanel .cols { display: flex; gap: 16px; flex-wrap: wrap; }
+  #rulePanel .col { flex: 1; min-width: 300px; }
+  #rulePanel button { display: block; width: 100%; text-align: left; margin: 6px 0; font-size: 14px; background: #2a2e3a; }
+  #rulePanel button.add:hover { background: #1f6f3a; }
+  #rulePanel button.rem:hover { background: #7a2323; }
+  #rulePanel button small { display: block; font-weight: 400; color: #aab; margin-top: 2px; }
+
+  [hidden] { display: none !important; }
+  .screen { width: 960px; max-width: 96vw; display: flex; flex-direction: column; gap: 12px; padding-bottom: 40px; }
+  .card { background: #1e2129; border-radius: 12px; padding: 16px; }
+  .authCard { width: 380px; max-width: 94vw; margin: 30px auto; display: flex; flex-direction: column; gap: 12px; }
+  .authCard h2 { margin: 0; font-size: 20px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row input { flex: 1; min-width: 160px; }
+  .grow { flex: 1; }
+  .center { text-align: center; }
+  .muted { color: #8a90a2; }
+  .small { font-size: 13px; }
+  button.secondary { background: #2a2e3a; }
+  button.ghost { background: transparent; border: 1px solid #3a3f4e; }
+  .topbar { display: flex; gap: 14px; align-items: center; justify-content: space-between; background: #1e2129; border-radius: 12px; padding: 10px 16px; }
+  .points { font-weight: 700; color: #ffd54f; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tabs button { background: #1e2129; }
+  .tabs button.active { background: #2e7dff; }
+  .tab h3 { margin: 18px 0 8px; }
+  .modes { display: flex; gap: 12px; flex-wrap: wrap; }
+  .mode { flex: 1; min-width: 260px; cursor: pointer; border: 2px solid transparent; }
+  .mode.active { border-color: #2e7dff; }
+  .mode h3 { margin: 0 0 6px; }
+  .mode p { margin: 0; color: #aab; font-size: 14px; line-height: 1.5; }
+  #loadoutSummary:empty { display: none; }
+  button.big { width: 100%; font-size: 20px; padding: 16px; margin-bottom: 8px; background: linear-gradient(90deg, #2e7dff, #7c4dff); }
+  .warn { background: #3a2a10; border: 1px solid #8a6a1f; color: #ffd27a; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 10px; }
+  .packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .pack { background: #1e2129; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .packHead { font-size: 17px; }
+  .pack ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.7; }
+  .rar { font-size: 12px; font-weight: 700; }
+  .skinRow { display: flex; gap: 10px; justify-content: space-around; text-align: center; }
+  .skinCell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  canvas.skinprev { border-radius: 6px; background: transparent; cursor: default; }
+  canvas.skinprev.big { width: 96px; height: 96px; }
+  .invItem { display: flex; gap: 12px; align-items: center; background: #1e2129; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border: 2px solid transparent; }
+  .invItem.on { border-color: #7ee787; }
+  .bigIconSm { font-size: 28px; }
+  .skinGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .skinCard { background: #1e2129; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; border: 2px solid transparent; font-size: 14px; }
+  .skinCard.on { border-color: #7ee787; }
+  .skinCard button { padding: 6px 12px; font-size: 14px; }
+  .tradeCols { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+  .tradeCols .col { flex: 1; min-width: 260px; background: #171a21; border-radius: 8px; padding: 10px; }
+  .tradeCols h4 { margin: 0 0 8px; }
+  .tradeRow { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .tradeRow input { width: 80px; padding: 6px 8px; }
+  .tradeRow .muted { margin-left: auto; font-size: 12px; }
+  .tradeItem { display: flex; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid #2a2e3a; padding: 10px 0; font-size: 14px; line-height: 1.6; }
+  .tradeItem:first-child { border-top: none; }
+  #rollModal { display: none; position: fixed; inset: 0; background: #000c; z-index: 20; align-items: center; justify-content: center; }
+  #rollModal .box { background: #1e2129; border-radius: 14px; padding: 24px 30px; min-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .bigIcon { font-size: 72px; }
+  .rollName { font-size: 22px; font-weight: 800; }
+  #tutModal { display: none; position: fixed; inset: 0; background: #000c; z-index: 25; align-items: center; justify-content: center; }
+  .tutBox { background: #1e2129; border-radius: 14px; padding: 20px 24px; width: 560px; max-width: 94vw; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .tutBox h2 { margin: 0; font-size: 22px; text-align: center; }
+  #tutCanvas { background: #171a21; border-radius: 10px; width: 480px; max-width: 100%; height: auto; cursor: default; }
+  #tutText { font-size: 15px; line-height: 1.6; color: #cfd3e0; text-align: center; min-height: 96px; }
+  #tutDots { display: flex; gap: 6px; }
+  #tutDots span { width: 8px; height: 8px; border-radius: 50%; background: #3a3f4e; }
+  #tutDots span.on { background: #2e7dff; }
+  .tutNav { width: 100%; justify-content: space-between; }
+  .tutNav button { min-width: 130px; }
+  #tutNext.waiting { background: linear-gradient(90deg, #2e7dff 0%, #2e7dff var(--p, 0%), #444 var(--p, 0%)); animation: tutfill .5s linear forwards; }
+  @property --p { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+  @keyframes tutfill { from { --p: 0%; } to { --p: 100%; } }
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2e7dff; color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 600; transition: transform .25s, opacity .25s; z-index: 30; max-width: 90vw; opacity: 0; pointer-events: none; }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.bad { background: #c62828; }
