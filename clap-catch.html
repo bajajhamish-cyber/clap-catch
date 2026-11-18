@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clap Catch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #14161c; color: #e8e8ee; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  h1 { margin: 18px 0 6px; letter-spacing: 2px; }
+  #lobby { margin-top: 40px; background: #1e2129; padding: 28px; border-radius: 12px; width: 340px; display: flex; flex-direction: column; gap: 12px; }
+  input, button { font-size: 16px; padding: 10px 12px; border-radius: 8px; border: 1px solid #333846; background: #12141a; color: #fff; }
+  button { background: #2e7dff; border: none; cursor: pointer; font-weight: 600; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { background: #444; cursor: default; filter: none; }
+  #game { display: none; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 30px; }
+  canvas { background: #1b1e26; border-radius: 12px; max-width: 96vw; height: auto; cursor: crosshair; }
+  #bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  #controls { font-size: 14px; color: #aab; text-align: center; max-width: 960px; line-height: 1.6; }
+  kbd { background: #2a2e3a; border-radius: 4px; padding: 1px 6px; border: 1px solid #3a3f4e; font-size: 13px; }
+  #panels { display: flex; gap: 10px; width: 960px; max-width: 96vw; flex-wrap: wrap; }
+  .panel { flex: 1; min-width: 280px; background: #1e2129; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .panel h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8a90a2; }
+  .ab { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
+  .ab.off { opacity: .4; }
+  .ab .why { color: #8a90a2; font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #2a2e3a; color: #aab; margin-left: 4px; }
+  #log { font-size: 14px; width: 960px; max-width: 96vw; min-height: 90px; background: #1e2129; border-radius: 8px; padding: 8px 12px; }
+  #log div { padding: 2px 0; }
+  .err { color: #ff7676; font-size: 14px; }
+  #rulePanel { display: none; position: fixed; inset: 0; background: #000b; z-index: 10; align-items: center; justify-content: center; }
+  #rulePanel .box { background: #1e2129; border-radius: 12px; padding: 20px; width: 760px; max-width: 96vw; max-height: 90vh; overflow: auto; }
+  #rulePanel .cols { display: flex; gap: 16px; flex-wrap: wrap; }
+  #rulePanel .col { flex: 1; min-width: 300px; }
+  #rulePanel button { display: block; width: 100%; text-align: left; margin: 6px 0; font-size: 14px; background: #2a2e3a; }
+  #rulePanel button.add:hover { background: #1f6f3a; }
+  #rulePanel button.rem:hover { background: #7a2323; }
+  #rulePanel button small { display: block; font-weight: 400; color: #aab; margin-top: 2px; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<h1>👏 CLAP CATCH</h1>
+
+<div id="lobby">
+  <input id="nameIn" placeholder="Your name" maxlength="12">
+  <input id="roomIn" placeholder="Room code (e.g. 7B)" maxlength="10">
+  <button id="joinBtn">Join room</button>
+  <div id="lobbyErr" class="err"></div>
+  <div style="font-size:13px;color:#99a">Everyone types the same room code to play together.</div>
+</div>
+
+<div id="game">
+  <div id="bar">
+    <span id="roomLabel"></span>
+    <button id="startBtn">Start new round</button>
+  </div>
+  <canvas id="c" width="960" height="640"></canvas>
+  <div id="controls">
+    <b>Holding the ball:</b> aim with <kbd>mouse</kbd> or <kbd>A</kbd>/<kbd>D</kbd> · hold <kbd>Space</kbd> to charge, let go early to fake · <kbd>G</kbd><kbd>G</kbd><kbd>G</kbd> = slam it down and sacrifice yourself (takes your double-forcers out with you)<br>
+    <b>Everyone else:</b> <kbd>B</kbd> clap · <kbd>Space</kbd> catch · <b>Abilities:</b> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> · <kbd>Esc</kbd> cancel picking
+  </div>
+  <div id="panels">
+    <div class="panel"><h3>Your abilities</h3><div id="abilBox"></div></div>
+    <div class="panel"><h3>Room rules</h3><div id="rulesBox"></div></div>
+  </div>
+  <div id="log"></div>
+</div>
+
+<div id="rulePanel"><div class="box">
+  <h2 style="margin-top:0">🏆 You won! Add <u>or</u> remove one rule</h2>
+  <div class="cols">
+    <div class="col"><h3>➕ Add</h3><div id="addList"></div></div>
+    <div class="col"><h3>➖ Remove</h3><div id="remList"></div></div>
+  </div>
+  <button id="skipRule" style="text-align:center;background:#444;margin-top:12px">Skip (no change)</button>
+</div></div>
+
+<script>
+// ======================================================================
+//  FIREBASE CONFIG
+// ======================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBr1YKkML_CQw_DKjif4wtRRrmtvWUuHHw",
+  authDomain: "clap-catch.firebaseapp.com",
+  databaseURL: "https://clap-catch-default-rtdb.firebaseio.com",
+  projectId: "clap-catch",
+  storageBucket: "clap-catch.firebasestorage.app",
+  messagingSenderId: "1041052423272",
+  appId: "1:1041052423272:web:1a683a5df2385fd0b117dd",
+  measurementId: "G-GVL28C2LQG"
+};
+
+// ======================================================================
+//  Game tuning
+// ======================================================================
+const CHARGE_TIME      = 1400;  // ms to fill the throw bar
+const FLIGHT_TIME      = 750;   // ms ball takes to travel
+const CATCH_FROM       = 0.6;   // catch allowed after 60% of the flight
+const DROP_GRACE       = 280;   // ms after arrival before it counts as dropped
+const CUBE             = 46;    // player cube size
+const CLAP_TOLERANCE   = 120;   // ms: a clap this close before the throw still counts (network lag)
+const CLAP_JUDGE_DELAY = 300;   // ms to wait before calling a clap "juked"
+const HOT_POTATO_MS    = 3000;
+const SPIN_MS          = 5000;
+const FIREBALL_WINDOW  = 0.35;  // fireball must be used before the ball is 35% of the way
+const REDO_GRACE_MS    = 2500;
+const DF_GRACE_MS      = 1500;  // time to Ward before a dead double-forcer takes you out
+const FIREBALL_LOCK_MS = 600;   // after a fireball lands on you, Space does nothing until your bar shows  // when 1 player is left, wait this long if someone can still REDO
+const MAX_ABILITIES    = 3;
+const ABILITY_KEYS     = ["j", "k", "l"];
+const COLORS = ["#4fc3f7","#ffb74d","#ba68c8","#4db6ac","#f06292","#aed581","#ffd54f","#7986cb","#e57373","#90a4ae"];
+
+// ======================================================================
+//  RULES
+// ======================================================================
+const RULES = {
+  doubleClap:      { name: "Clap x2",          type: "passive", icon: "👏👏", desc: "You must clap twice before catching (and twice for a nuke)." },
+  noJuke:          { name: "No Juke",          type: "passive", icon: "🚫🎭", desc: "Space throws instantly. No charging, no faking." },
+  hotPotato:       { name: "Hot Potato",       type: "passive", icon: "🥔", desc: "Hold the ball longer than 3s and you're OUT." },
+  spinning:        { name: "Spinning",         type: "passive", icon: "🌀", desc: "Your aim cycles to the next player every 5s by itself. You can't control it." },
+  soulsteal:       { name: "Soulsteal",        type: "passive", icon: "👻", desc: "The first player you get out each round by making them mess up a catch (no clap, drop or fireball): you steal their unused abilities (not Redo)." },
+  fireball:        { name: "Fireball",         type: "ability", icon: "🔥", desc: "Right after you throw (before 35% of the way): they don't need to clap, but if they press catch they're OUT. If it lands, it's theirs: wait for their bar to show before they can throw." },
+  swap:            { name: "Swap",             type: "ability", icon: "🔄", desc: "While a ball is flying at you: swap places with the thrower, so now it's flying at them." },
+  doubleForce:     { name: "Double Force",     type: "ability", icon: "⛓️", desc: "The holder must throw to you now AND next time. Stacks: 2+ forces means they can't satisfy them all and go out, unless they Ward or someone Absolute Counters. If you're out by then, they're out." },
+  antiForce:       { name: "Anti Force",       type: "ability", icon: "🛡️", desc: "The holder can't throw to you this turn. Not in 1v1, not if they're double-forced." },
+  counterForce:    { name: "Counter Force",    type: "ability", icon: "🎯", desc: "Click a player: the holder must throw to them this turn (can't be you). Not allowed if a force is already on them." },
+  absoluteCounter: { name: "Absolute Counter", type: "ability", icon: "⛔", desc: "This turn, all active abilities and any used after it don't work. Also clears double forces on whoever has the ball, and cancels a nuke." },
+  ward:            { name: "Ward",             type: "ability", icon: "🔰", desc: "While you hold the ball: remove every force, counter force and anti force on you." },
+  nuke:            { name: "Nuke",             type: "ability", icon: "☢️", desc: "Throw it to the middle at half speed. EVERYONE (you too) must clap before it lands or they're out. If nobody claps, the round resets and everyone comes back." },
+  redo:            { name: "Redo",             type: "ability", icon: "💖", desc: "Once per round, come back in after you get out. Can't be stolen." },
+};
+
+// ======================================================================
+let db, roomRef, playersRef, ballRef, logRef, rulesRef, doublesRef, myRef;
+let me = { id: Math.random().toString(36).slice(2, 10), name: "" };
+let players = {}, ball = null, rules = {}, doubles = {};
+let serverOffset = 0;
+const now = () => Date.now() + serverOffset;
+
+let mouse = { x: 480, y: 320, moved: false };
+let lockedTarget = null;
+let charging = false, chargeStart = 0, myCharge = 0;
+let lastSentAim = null;
+let roomCleanupArmed = false;
+let resolvedSeq = -1, throwingSeq = -1, dfSeq = -1, endingSeq = -1, hpSeq = -1;
+let overPending = 0;
+let pickMode = null;           // "counter" while choosing a counter-force target
+let gTimes = [];
+let flash = { msg: "", until: 0 };
+let clapFx = {}, lastClapSeen = {};
+let dispAng = {}, lastPos = {};
+
+const $ = id => document.getElementById(id);
+const canvas = $("c"), ctx = canvas.getContext("2d");
+
+// ---------------------------------------------------------------- lobby
+$("nameIn").value = localStorage.getItem("cc_name") || "";
+$("roomIn").value = localStorage.getItem("cc_room") || "";
+$("joinBtn").onclick = join;
+$("roomIn").addEventListener("keydown", e => { if (e.key === "Enter") join(); });
+
+async function join() {
+  const name = $("nameIn").value.trim();
+  const room = $("roomIn").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!name || !room) { $("lobbyErr").textContent = "Type a name and a room code."; return; }
+  try { localStorage.setItem("cc_name", name); localStorage.setItem("cc_room", room); } catch (e) {}
+  me.name = name;
+  $("joinBtn").disabled = true;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    db.ref(".info/serverTimeOffset").on("value", s => serverOffset = s.val() || 0);
+
+    roomRef    = db.ref("rooms/" + room);
+    playersRef = roomRef.child("players");
+    ballRef    = roomRef.child("ball");
+    logRef     = roomRef.child("log");
+    rulesRef   = roomRef.child("rules");
+    doublesRef = roomRef.child("doubles");
+    myRef      = playersRef.child(me.id);
+
+    await sweepEmptyRooms(room);
+
+    const existingBall = (await ballRef.once("value")).val();
+    const roundRunning = existingBall && ["held", "flying", "nuke"].includes(existingBall.state);
+    const existingPlayers = (await playersRef.once("value")).val() || {};
+    const used = Object.values(existingPlayers).map(p => p.color);
+    const color = COLORS.find(c => !used.includes(c)) || COLORS[Math.floor(Math.random() * COLORS.length)];
+
+    await myRef.set({
+      name, color, joinedAt: firebase.database.ServerValue.TIMESTAMP, seat: Date.now() + Math.random(),
+      out: !!roundRunning, chargeStart: 0, aim: null, clapAt: 0, prevClapAt: 0, uses: {}, stole: false
+    });
+    myRef.onDisconnect().remove();
+
+    playersRef.on("value", s => { players = s.val() || {}; armRoomCleanup(); hostDuties(); });
+    ballRef.on("value", s => {
+      ball = s.val();
+      if (!iHaveBall()) stopCharge(false);
+      if (!ball || ball.state !== "held") pickMode = null;
+      hostDuties();
+    });
+    rulesRef.on("value", s => { rules = s.val() || {}; });
+    doublesRef.on("value", s => { doubles = s.val() || {}; });
+    logRef.limitToLast(6).on("value", s => {
+      const items = Object.values(s.val() || {});
+      $("log").innerHTML = "";
+      items.reverse().forEach(t => { const d = document.createElement("div"); d.textContent = t.msg; $("log").appendChild(d); });
+    });
+
+    addLog(`${name} joined${roundRunning ? " (watching until next round)" : ""}`);
+    $("lobby").style.display = "none";
+    $("game").style.display = "flex";
+    $("roomLabel").textContent = "Room: " + room;
+    requestAnimationFrame(loop);
+  } catch (err) {
+    console.error(err);
+    $("lobbyErr").textContent = "Couldn't connect: " + err.message;
+    $("joinBtn").disabled = false;
+  }
+}
+
+function addLog(msg) {
+  logRef.push({ msg, t: firebase.database.ServerValue.TIMESTAMP });
+  if (isHost()) trimLog();
+}
+function trimLog() {
+  logRef.once("value", s => {
+    const keys = Object.keys(s.val() || {});
+    if (keys.length <= 20) return;
+    const del = {};
+    keys.slice(0, keys.length - 20).forEach(k => del[k] = null);
+    logRef.update(del);
+  });
+}
+
+// ---------------------------------------------------------------- room cleanup
+function armRoomCleanup() {
+  const alone = Object.keys(players).length === 1 && players[me.id];
+  if (alone && !roomCleanupArmed) {
+    roomRef.onDisconnect().remove();
+    roomCleanupArmed = true;
+  } else if (!alone && roomCleanupArmed) {
+    roomRef.onDisconnect().cancel();
+    myRef.onDisconnect().remove();
+    roomCleanupArmed = false;
+  }
+}
+async function sweepEmptyRooms(myRoom) {
+  try {
+    const all = (await db.ref("rooms").once("value")).val() || {};
+    const del = {};
+    Object.entries(all).forEach(([code, r]) => {
+      if (code !== myRoom && (!r.players || !Object.keys(r.players).length)) del[code] = null;
+    });
+    if (Object.keys(del).length) await db.ref("rooms").update(del);
+  } catch (e) { console.warn("sweep failed", e); }
+}
+
+// ---------------------------------------------------------------- helpers
+const nm = id => players[id] ? players[id].name : "someone";
+const randomOf = arr => arr[Math.floor(Math.random() * arr.length)];
+function sortedIds() { return Object.keys(players).sort((a, b) => (players[a].joinedAt || 0) - (players[b].joinedAt || 0)); }
+function seatIds() { return Object.keys(players).sort((a, b) => (players[a].seat || 0) - (players[b].seat || 0)); }
+function hostId() { return sortedIds()[0]; }
+function isHost() { return hostId() === me.id; }
+function aliveIds() { return seatIds().filter(id => !players[id].out); }
+function isAlive(id) { return players[id] && !players[id].out; }
+function hasRule(id) { return !!rules[id]; }
+function activeAbilities() {
+  return Object.keys(rules).filter(id => RULES[id] && RULES[id].type === "ability").sort((a, b) => rules[a] - rules[b]).slice(0, MAX_ABILITIES);
+}
+function activePassives() { return Object.keys(rules).filter(id => RULES[id] && RULES[id].type === "passive"); }
+function roundRunning() { return ball && ["held", "flying", "nuke"].includes(ball.state); }
+function iHaveBall() { return ball && ball.state === "held" && ball.holder === me.id && isAlive(me.id); }
+function ballComingToMe() { return ball && ball.state === "flying" && ball.to === me.id; }
+function progress(b) { return (now() - b.t0) / b.dur; }
+function heldBall(holder, lastFrom, seq) { return { state: "held", holder, lastFrom: lastFrom || null, seq, heldSince: now() }; }
+function say(msg) { flash = { msg, until: performance.now() + 1800 }; }
+
+function clappedFor(id, t0) {
+  const p = players[id]; if (!p) return false;
+  const ok = x => (x || 0) >= t0 - CLAP_TOLERANCE;
+  return hasRule("doubleClap") ? ok(p.clapAt) && ok(p.prevClapAt) : ok(p.clapAt);
+}
+
+// Who can the holder throw to right now?
+// Everyone the holder is forced to throw to right now (double forces + counter force)
+function forcedSet(h) {
+  if (!ball || ball.nullified) return [];
+  const set = new Set(Object.keys(doubles[h] || {}).filter(id => players[id]));
+  if (ball.counter && players[ball.counter.to] && ball.counter.to !== h) set.add(ball.counter.to);
+  return [...set];
+}
+function allowedTargets(h) {
+  let opts = aliveIds().filter(id => id !== h);
+  const req = forcedSet(h).filter(isAlive);
+  if (req.length) return req;
+  if (ball && !ball.nullified && ball.anti && aliveIds().length > 2) {
+    const filtered = opts.filter(id => !ball.anti[id]);
+    if (filtered.length) opts = filtered;
+  }
+  return opts;
+}
+
+// Eliminate someone (with Soulsteal if it's on)
+function eliminate(victim, by, msg) {
+  if (!players[victim]) return;
+  const u = {};
+  u[`players/${victim}/out`] = true;
+  // "by" is only given for messed-up catches (no clap / drop / fireball). Forces, jukes, nukes, hot potato: nobody steals.
+  if (by && by !== victim && hasRule("soulsteal") && isAlive(by) && !players[by].stole) {
+    u[`players/${by}/stole`] = true;
+    const vu = players[victim].uses || {}, bu = Object.assign({}, players[by].uses || {});
+    let got = [];
+    Object.keys(vu).forEach(k => {
+      if (k !== "redo" && vu[k] > 0) { bu[k] = (bu[k] || 0) + vu[k]; u[`players/${victim}/uses/${k}`] = 0; got.push(RULES[k].name); }
+    });
+    u[`players/${by}/uses`] = bu;
+    if (got.length) msg += ` 👻 ${nm(by)} stole: ${got.join(", ")}`;
+  }
+  roomRef.update(u);
+  addLog(msg);
+}
+
+// ---------------------------------------------------------------- host jobs
+function hostDuties() {
+  if (!isHost() || !ball) return;
+  const alive = aliveIds();
+  // clean up double forces where someone left
+  Object.entries(doubles).forEach(([v, d]) => {
+    if (!players[v]) return doublesRef.child(v).remove();
+    Object.keys(d || {}).forEach(by => { if (!players[by]) doublesRef.child(v + "/" + by).remove(); });
+  });
+
+  if (ball.state === "held" && !players[ball.holder] && alive.length) {
+    ballRef.set(heldBall(randomOf(alive), null, (ball.seq || 0) + 1));
+  } else if (ball.state === "flying" && !players[ball.to]) {
+    const back = isAlive(ball.from) ? ball.from : alive[0];
+    if (back) ballRef.set(heldBall(back, null, (ball.seq || 0) + 1));
+  }
+}
+
+function endRound(winner) {
+  if (endingSeq === ball.seq) return;
+  endingSeq = ball.seq;
+  ballRef.transaction(cur => (cur && ["held", "flying", "nuke"].includes(cur.state))
+    ? { state: "over", winner: winner || null, seq: cur.seq + 1, ruleChosen: !winner } : undefined,
+    (e, ok) => { if (ok) addLog(winner ? `🏆 ${nm(winner)} wins! They get to add or remove a rule.` : "Round over, nobody left!"); });
+}
+
+$("startBtn").onclick = async () => {
+  const ids = Object.keys(players);
+  if (ids.length < 2) { addLog("Need at least 2 players to start."); return; }
+  if (ball && ball.state === "over" && !ball.ruleChosen && players[ball.winner]) { say(`Waiting for ${nm(ball.winner)} to pick a rule…`); return; }
+  await roomRef.update(freshRoundUpdates());
+  addLog(`New round started by ${me.name}`);
+};
+
+function freshRoundUpdates() {
+  const ids = Object.keys(players);
+  const fresh = {};
+  activeAbilities().forEach(a => fresh[a] = 1);
+  const updates = {};
+  ids.forEach(id => {
+    Object.assign(updates, {
+      [`players/${id}/out`]: false, [`players/${id}/clapAt`]: 0, [`players/${id}/prevClapAt`]: 0,
+      [`players/${id}/chargeStart`]: 0, [`players/${id}/aim`]: null, [`players/${id}/stole`]: false,
+      [`players/${id}/uses`]: fresh
+    });
+  });
+  updates["doubles"] = null;
+  updates["ball"] = heldBall(randomOf(ids), null, Date.now());
+  return updates;
+}
+
+// ---------------------------------------------------------------- winner's rule choice
+function renderRulePanel() {
+  const show = ball && ball.state === "over" && !ball.ruleChosen && ball.winner === me.id;
+  $("rulePanel").style.display = show ? "flex" : "none";
+  if (!show || $("rulePanel").dataset.seq == ball.seq) return;
+  $("rulePanel").dataset.seq = ball.seq;
+  const abilityFull = activeAbilities().length >= MAX_ABILITIES;
+  const add = $("addList"), rem = $("remList");
+  add.innerHTML = ""; rem.innerHTML = "";
+  Object.entries(RULES).forEach(([id, r]) => {
+    const b = document.createElement("button");
+    const active = hasRule(id);
+    b.className = active ? "rem" : "add";
+    b.innerHTML = `${r.icon} ${r.name} <span class="tag">${r.type}</span><small>${r.desc}</small>`;
+    if (!active && r.type === "ability" && abilityFull) { b.disabled = true; b.innerHTML += "<small>(3 abilities max, remove one first)</small>"; }
+    b.onclick = () => chooseRule(active ? "remove" : "add", id);
+    (active ? rem : add).appendChild(b);
+  });
+  if (!rem.children.length) rem.innerHTML = "<div style='color:#8a90a2'>No rules yet</div>";
+}
+$("skipRule").onclick = () => chooseRule("skip");
+
+function chooseRule(action, id) {
+  const seq = ball.seq;
+  ballRef.transaction(cur => (cur && cur.seq === seq && cur.state === "over" && !cur.ruleChosen) ? Object.assign({}, cur, { ruleChosen: true }) : undefined,
+    (e, ok) => {
+      if (!ok) return;
+      if (action === "add") { rulesRef.child(id).set(firebase.database.ServerValue.TIMESTAMP); addLog(`➕ ${me.name} added ${RULES[id].icon} ${RULES[id].name}`); }
+      else if (action === "remove") { rulesRef.child(id).remove(); addLog(`➖ ${me.name} removed ${RULES[id].icon} ${RULES[id].name}`); }
+      else addLog(`${me.name} kept the rules the same`);
+    });
+}
+
+// ---------------------------------------------------------------- input
+function canvasPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * canvas.width / r.width, y: (e.clientY - r.top) * canvas.height / r.height };
+}
+canvas.addEventListener("mousemove", e => { const p = canvasPoint(e); mouse.x = p.x; mouse.y = p.y; mouse.moved = true; });
+canvas.addEventListener("click", e => {
+  if (pickMode !== "counter") return;
+  const p = canvasPoint(e);
+  const hit = Object.keys(lastPos).find(id => Math.abs(p.x - lastPos[id].x) < CUBE * 0.8 && Math.abs(p.y - lastPos[id].y) < CUBE * 0.8);
+  if (hit) applyCounter(hit);
+});
+
+window.addEventListener("keydown", e => {
+  if (!myRef || document.activeElement.tagName === "INPUT") return;
+  const k = e.key.toLowerCase();
+  if (k === " ") e.preventDefault();
+  if (e.repeat) return;
+
+  if (k === " ") {
+    if (iHaveBall()) {
+      if (ball.lockUntil && now() < ball.lockUntil) return;   // wait for your bar to show
+      if (hasRule("noJuke")) throwBall();
+      else { charging = true; chargeStart = performance.now(); myRef.update({ chargeStart: now() }); }
+    } else if (ballComingToMe()) tryCatch();
+  } else if (k === "b") clap();
+  else if (k === "g") groundSlam();
+  else if (k === "escape") pickMode = null;
+  else if (ABILITY_KEYS.includes(k)) useAbility(activeAbilities()[ABILITY_KEYS.indexOf(k)]);
+  else if (iHaveBall() && ["a", "arrowleft", "d", "arrowright", "q", "e"].includes(k)) cycleTarget(["a", "arrowleft", "q"].includes(k) ? -1 : 1);
+});
+window.addEventListener("keyup", e => { if (e.key === " " && charging) stopCharge(true); });
+
+function stopCharge(sync) {
+  if (!charging && myCharge === 0) return;
+  charging = false; myCharge = 0;
+  if (sync && myRef) myRef.update({ chargeStart: 0 });
+}
+
+function cycleTarget(dir) {
+  if (hasRule("spinning")) return;
+  const opts = allowedTargets(me.id);
+  if (opts.length < 2) return;
+  let i = opts.indexOf(lockedTarget);
+  lockedTarget = opts[(i + dir + opts.length) % opts.length];
+  mouse.moved = false;
+}
+
+function pickTargetFromMouse(pos, opts) {
+  const myPos = pos[me.id]; if (!myPos) return null;
+  const aim = Math.atan2(mouse.y - myPos.y, mouse.x - myPos.x);
+  let best = null, bestDiff = Infinity;
+  opts.forEach(id => {
+    if (!pos[id]) return;
+    const a = Math.atan2(pos[id].y - myPos.y, pos[id].x - myPos.x);
+    let d = Math.abs(a - aim); if (d > Math.PI) d = Math.PI * 2 - d;
+    if (d < bestDiff) { bestDiff = d; best = id; }
+  });
+  return best;
+}
+
+// ---------------------------------------------------------------- throwing / catching
+function throwBall() {
+  const b = ball, tgt = lockedTarget;
+  if (!iHaveBall() || !tgt || !isAlive(tgt) || throwingSeq === b.seq) return;
+  throwingSeq = b.seq;
+  const req = b.nullified ? [] : forcedSet(me.id);
+  const nb = { state: "flying", from: me.id, to: tgt, t0: now(), dur: FLIGHT_TIME, seq: b.seq + 1, nullified: !!b.nullified };
+  ballRef.transaction(cur => (cur && cur.seq === b.seq && cur.state === "held" && cur.holder === me.id) ? nb : undefined, (e, ok) => {
+    if (!ok) return;
+    if (b.nullified) return;
+    const left = (doubles[me.id] || {})[tgt];
+    if (left) { if (left <= 1) doublesRef.child(me.id + "/" + tgt).remove(); else doublesRef.child(me.id + "/" + tgt).set(left - 1); }
+    const unmet = req.filter(id => id !== tgt);
+    if (unmet.length) eliminate(me.id, null, `⛓️ ${me.name} couldn't throw to everyone they were forced to (${unmet.map(nm).join(", ")}). OUT!`);
+  });
+  myRef.update({ chargeStart: 0, aim: null });
+  charging = false; myCharge = 0;
+}
+
+function groundSlam() {
+  const t = performance.now();
+  gTimes = gTimes.filter(x => t - x < 1200); gTimes.push(t);
+  if (gTimes.length < 3) return;
+  gTimes = [];
+  if (!iHaveBall()) return;
+  const b = ball;
+  const forcers = b.nullified ? [] : Object.keys(doubles[me.id] || {}).filter(isAlive);
+  const victims = [me.id, ...forcers];
+  const survivors = aliveIds().filter(id => !victims.includes(id));
+  stopCharge(true);
+  if (!survivors.length) {   // nobody would be left: reset the round
+    ballTx(b.seq, cur => cur.state === "held" ? heldBall(me.id, null, cur.seq + 1) : undefined, () => {
+      roomRef.update(freshRoundUpdates());
+      addLog(`⬇️ ${me.name} slammed the ball and took everyone out. Round reset, everyone's back!`);
+    });
+    return;
+  }
+  const to = randomOf(survivors);
+  ballTx(b.seq, cur => (cur.state === "held" && cur.holder === me.id) ? heldBall(to, me.id, cur.seq + 1) : undefined, () => {
+    doublesRef.child(me.id).remove();
+    eliminate(me.id, null, `⬇️ ${me.name} slammed the ball down and sacrificed themselves${forcers.length ? `, taking ${forcers.map(nm).join(", ")} down too!` : "."} Ball goes to ${nm(to)}`);
+    forcers.forEach(id => roomRef.update({ [`players/${id}/out`]: true }));
+  });
+}
+
+function clap() {
+  const p = players[me.id];
+  if (!p || p.out || !roundRunning() || iHaveBall()) return;
+  playClap();
+  const t = now();
+  myRef.update({ clapAt: t, prevClapAt: p.clapAt || 0 });
+  if (ballComingToMe() || ball.state === "nuke") return;          // good clap
+  setTimeout(() => {                                               // maybe a throw is already on its way
+    const b = ball, mine = players[me.id];
+    if (!mine || mine.out || !b || b.state === "over") return;
+    if ((b.state === "flying" && b.to === me.id || b.state === "nuke") && t >= b.t0 - CLAP_TOLERANCE) return;
+    if (b.state === "held" && b.holder === me.id) return;
+    eliminate(me.id, null, `🤡 ${me.name} got juked and clapped. OUT!`);
+  }, CLAP_JUDGE_DELAY);
+}
+
+function tryCatch() {
+  const b = ball;
+  if (progress(b) < CATCH_FROM) return;
+  if (b.fireball && !b.nullified) return resolveFlight(b, "fireballCatch");
+  resolveFlight(b, clappedFor(me.id, b.t0) ? "catch" : "noclap");
+}
+
+// kind: catch | noclap | drop | fireballCatch | fireballLand
+function resolveFlight(b, kind) {
+  if (resolvedSeq === b.seq) return;
+  resolvedSeq = b.seq;
+  const rid = b.to;
+  const safe = kind === "catch" || kind === "fireballLand";
+  const back = isAlive(b.from) ? b.from : randomOf(aliveIds().filter(id => id !== rid));
+  const nb = safe ? heldBall(rid, b.from, b.seq + 1) : heldBall(back, rid, b.seq + 1);
+  if (kind === "fireballLand") nb.lockUntil = now() + FIREBALL_LOCK_MS;
+  ballRef.transaction(cur => (cur && cur.seq === b.seq && cur.state === "flying") ? nb : undefined, (e, ok) => {
+    if (!ok) return;
+    if (kind === "catch") addLog(`✅ ${nm(rid)} clapped and caught it!`);
+    else if (kind === "fireballLand") addLog(`🔥 ${nm(rid)} let the fireball land. Safe!`);
+    else if (kind === "noclap") eliminate(rid, b.from, `❌ ${nm(rid)} caught without clapping. OUT! Ball goes back to ${nm(back)}.`);
+    else if (kind === "fireballCatch") eliminate(rid, b.from, `🔥 ${nm(rid)} tried to catch a fireball. BURNED, OUT!`);
+    else eliminate(rid, b.from, `💥 ${nm(rid)} dropped it. OUT!`);
+  });
+}
+
+function resolveNuke(b) {
+  if (resolvedSeq === b.seq) return;
+  resolvedSeq = b.seq;
+  const alive = aliveIds();
+  const fails = alive.filter(id => !clappedFor(id, b.t0));
+  if (fails.length === alive.length) {                           // nobody clapped: round resets, everyone's back
+    ballRef.transaction(cur => (cur && cur.seq === b.seq && cur.state === "nuke") ? heldBall(b.by, null, b.seq + 1) : undefined, (e, ok) => {
+      if (!ok) return;
+      roomRef.update(freshRoundUpdates());
+      addLog("☢️ Nobody clapped for the nuke! Round reset, everyone's back in!");
+    });
+    return;
+  }
+  const survivors = alive.filter(id => !fails.includes(id));
+  const holder = survivors.includes(b.by) ? b.by : randomOf(survivors);
+  ballRef.transaction(cur => (cur && cur.seq === b.seq && cur.state === "nuke") ? heldBall(holder, null, b.seq + 1) : undefined, (e, ok) => {
+    if (!ok) return;
+    if (!fails.length) addLog("☢️ The nuke landed. Everyone clapped in time!");
+    fails.forEach(id => eliminate(id, null, `☢️ ${nm(id)} didn't clap for the nuke. BOOM, OUT!`));
+  });
+}
+
+// ---------------------------------------------------------------- abilities
+function canUse(id) {
+  const mine = players[me.id], b = ball;
+  if (!id || !mine) return "-";
+  if (!roundRunning()) return "Round not running";
+  if (((mine.uses || {})[id] || 0) <= 0) return "Used up this round";
+  if (id === "redo") return mine.out ? "" : "Use after you get out";
+  if (mine.out) return "You're out";
+  if (b.nullified) return "Absolute Counter is on this turn";
+  const othersHold = b.state === "held" && b.holder !== me.id;
+  switch (id) {
+    case "fireball": return (b.state === "flying" && b.from === me.id && !b.fireball && progress(b) < FIREBALL_WINDOW) ? "" : "Use right after you throw";
+    case "swap": return (b.state === "flying" && b.to === me.id && isAlive(b.from)) ? "" : "Use when a ball is flying at you";
+    case "doubleForce":
+      if (!othersHold) return "Use when someone else has the ball";
+      return (doubles[b.holder] || {})[me.id] ? "You already double-forced them" : "";
+    case "antiForce":
+      if (!othersHold) return "Use when someone else has the ball";
+      if (aliveIds().length <= 2) return "Disabled in 1v1";
+      if (Object.keys(doubles[b.holder] || {}).length) return "They're double-forced";
+      if (b.counter && b.counter.to === me.id) return "You're their counter-force target";
+      if (b.anti && b.anti[me.id]) return "Already on";
+      return "";
+    case "counterForce":
+      if (!othersHold) return "Use when someone else has the ball";
+      if (forcedSet(b.holder).length) return "A force is already on them";
+      return aliveIds().length <= 2 ? "Need 3+ players left" : "";
+    case "absoluteCounter": return "";
+    case "ward": case "nuke": return iHaveBall() ? "" : "Use while you hold the ball";
+  }
+  return "";
+}
+
+function spend(id) {
+  myRef.child("uses/" + id).transaction(n => Math.max(0, (n || 0) - 1));
+}
+
+// change the ball only if it's still the same turn
+function ballTx(seq, fn, onDone) {
+  ballRef.transaction(cur => (cur && cur.seq === seq) ? fn(cur) : undefined, (e, ok) => { if (ok && onDone) onDone(); });
+}
+
+function useAbility(id) {
+  if (!id) return;
+  const why = canUse(id);
+  if (why) { say(`${RULES[id].name}: ${why}`); return; }
+  const b = ball, R = RULES[id];
+  const done = msg => () => { spend(id); addLog(`${R.icon} ${msg}`); };
+
+  switch (id) {
+    case "fireball":
+      ballTx(b.seq, cur => cur.state === "flying" && !cur.nullified ? Object.assign({}, cur, { fireball: true }) : undefined,
+        done(`${me.name} turned it into a FIREBALL at ${nm(b.to)}! Don't catch it!`));
+      break;
+    case "swap": {
+      const thrower = b.from;
+      ballTx(b.seq, cur => cur.state === "flying" && cur.to === me.id && !cur.nullified ? Object.assign({}, cur, { from: me.id, to: thrower }) : undefined, () => {
+        const u = {};
+        u[`players/${me.id}/seat`] = players[thrower].seat;
+        u[`players/${thrower}/seat`] = players[me.id].seat;
+        roomRef.update(u);
+        done(`${me.name} SWAPPED with ${nm(thrower)}. Now it's flying at ${nm(thrower)}!`)();
+      });
+      break;
+    }
+    case "doubleForce": {
+      const h = b.holder;
+      doublesRef.child(h + "/" + me.id).transaction(cur => cur ? undefined : 2, (e, ok) => {
+        if (ok) done(`${me.name} DOUBLE FORCED ${nm(h)}: they must throw to ${me.name} now and next time`)();
+      });
+      break;
+    }
+    case "antiForce":
+      ballTx(b.seq, cur => {
+        if (cur.state !== "held" || cur.nullified) return;
+        return Object.assign({}, cur, { anti: Object.assign({}, cur.anti || {}, { [me.id]: true }) });
+      }, done(`${me.name} used ANTI FORCE. ${nm(b.holder)} can't throw to them this turn`));
+      break;
+    case "counterForce":
+      pickMode = "counter";
+      say("Click who they must throw to (Esc to cancel)");
+      break;
+    case "absoluteCounter":
+      ballTx(b.seq, cur => {
+        if (cur.nullified) return;
+        if (cur.state === "nuke") return Object.assign(heldBall(cur.by, null, cur.seq + 1), { nullified: true });
+        return Object.assign({}, cur, { nullified: true });
+      }, () => {
+        const victim = b.state === "held" ? b.holder : (b.state === "flying" ? b.from : null);
+        if (victim) doublesRef.child(victim).remove();
+        done(`${me.name} used ABSOLUTE COUNTER. No abilities work this turn!`)();
+      });
+      break;
+    case "ward":
+      ballTx(b.seq, cur => {
+        if (cur.state !== "held" || cur.holder !== me.id || cur.nullified) return;
+        const c = Object.assign({}, cur); delete c.counter; delete c.anti; return c;
+      }, () => { doublesRef.child(me.id).remove(); done(`${me.name} put up a WARD. All forces on them are gone`)(); });
+      break;
+    case "nuke":
+      stopCharge(true);
+      ballTx(b.seq, cur => (cur.state === "held" && cur.holder === me.id && !cur.nullified)
+        ? { state: "nuke", by: me.id, t0: now(), dur: FLIGHT_TIME * 2, seq: cur.seq + 1 } : undefined,
+        done(`${me.name} launched a NUKE! EVERYONE CLAP!`));
+      break;
+    case "redo":
+      myRef.update({ out: false, clapAt: 0, prevClapAt: 0 });
+      done(`${me.name} used REDO and is back in!`)();
+      break;
+  }
+}
+
+function applyCounter(target) {
+  const b = ball;
+  pickMode = null;
+  const why = canUse("counterForce");
+  if (why) return say(why);
+  if (target === me.id) return say("Counter Force can't be yourself");
+  if (target === b.holder || !isAlive(target)) return say("Pick someone else who's still in");
+  if (forcedSet(b.holder).length) return say("A force is already on them");
+  ballTx(b.seq, cur => (cur.state === "held" && !cur.nullified) ? Object.assign({}, cur, { counter: { to: target, by: me.id } }) : undefined, () => {
+    spend("counterForce");
+    addLog(`🎯 ${me.name} COUNTER FORCED ${nm(b.holder)} to throw to ${nm(target)}`);
+  });
+}
+
+// ---------------------------------------------------------------- sound
+let actx;
+function playClap() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const len = actx.sampleRate * 0.12, buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4);
+    const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    f.type = "bandpass"; f.frequency.value = 1500; g.gain.value = 0.8;
+    src.buffer = buf; src.connect(f); f.connect(g); g.connect(actx.destination); src.start();
+  } catch (e) {}
+}
+
+// ---------------------------------------------------------------- layout (you're always at the bottom, smooth rotation)
+function layout() {
+  const ids = seatIds(), n = ids.length, cx = 480, cy = 330, rx = 350, ry = 225;
+  const myIdx = Math.max(0, ids.indexOf(me.id)), pos = {};
+  ids.forEach((id, i) => {
+    const target = Math.PI / 2 + ((i - myIdx) / Math.max(n, 1)) * Math.PI * 2;
+    if (dispAng[id] === undefined) dispAng[id] = target;
+    else { let d = target - dispAng[id]; d = Math.atan2(Math.sin(d), Math.cos(d)); dispAng[id] += d * 0.12; }
+    pos[id] = { x: cx + Math.cos(dispAng[id]) * rx, y: cy + Math.sin(dispAng[id]) * ry };
+  });
+  return pos;
+}
+
+function lerpColor(a, b, t) {
+  const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
+  return "rgb(" + pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(",") + ")";
+}
+function chargeColor(c) {
+  if (c < 0.5) return lerpColor("#2ecc40", "#ff2a1a", c / 0.5);
+  return lerpColor("#ff2a1a", "#4a0000", (c - 0.5) / 0.5);
+}
+
+// ---------------------------------------------------------------- loop
+function loop() {
+  const pos = layout(); lastPos = pos;
+  const t = now();
+
+  if (ball) {
+    // --- holder: aim, charge, hot potato
+    if (iHaveBall()) {
+      const opts = allowedTargets(me.id);
+      if (opts.length === 1) lockedTarget = opts[0];
+      else if (hasRule("spinning") && opts.length) lockedTarget = opts[(Math.floor((t - (ball.heldSince || t)) / SPIN_MS) + (ball.seq % 97)) % opts.length];
+      else {
+        if (!opts.includes(lockedTarget)) lockedTarget = null;
+        if (mouse.moved || !lockedTarget) lockedTarget = pickTargetFromMouse(pos, opts);
+      }
+      if (charging) {
+        myCharge = Math.min(1, (performance.now() - chargeStart) / CHARGE_TIME);
+        if (myCharge >= 1) throwBall();
+      }
+      if (hasRule("hotPotato") && t - (ball.heldSince || t) > HOT_POTATO_MS && hpSeq !== ball.seq) {
+        hpSeq = ball.seq;
+        const b = ball, others = aliveIds().filter(id => id !== me.id);
+        if (others.length) {
+          stopCharge(true);
+          ballTx(b.seq, cur => (cur.state === "held" && cur.holder === me.id) ? heldBall(randomOf(others), me.id, cur.seq + 1) : undefined,
+            () => eliminate(me.id, null, `🥔 ${me.name} held the hot potato too long. OUT!`));
+        }
+      }
+      if (lockedTarget !== lastSentAim) { myRef.update({ aim: lockedTarget || null }); lastSentAim = lockedTarget; }
+    }
+
+    // --- double force: if the person you must pass to is already out, you're out
+    if (ball.state === "held" && !ball.nullified && dfSeq !== ball.seq && (ball.holder === me.id || isHost())) {
+      const h = ball.holder;
+      const deadBy = Object.keys(doubles[h] || {}).find(by => players[by] && players[by].out);
+      if (deadBy && isAlive(h) && t - (ball.heldSince || t) > DF_GRACE_MS) {
+        dfSeq = ball.seq;
+        const b = ball, others = aliveIds().filter(id => id !== h);
+        if (others.length) {
+          const next = others.includes(b.lastFrom) ? b.lastFrom : randomOf(others);
+          ballTx(b.seq, cur => (cur.state === "held" && cur.holder === h) ? heldBall(next, null, cur.seq + 1) : undefined, () => {
+            doublesRef.child(h).remove();
+            eliminate(h, null, `⛓️ ${nm(h)} was double-forced to pass to ${nm(deadBy)}, who's already out. OUT!`);
+          });
+        }
+      }
+    }
+
+    // --- flight resolution (receiver decides; host backs up)
+    if (ball.state === "flying") {
+      const late = t - (ball.t0 + ball.dur);
+      const kind = ball.fireball && !ball.nullified ? "fireballLand" : "drop";
+      if (ball.to === me.id && late > DROP_GRACE) resolveFlight(ball, kind);
+      else if (isHost() && late > DROP_GRACE + 1500) resolveFlight(ball, kind);
+    }
+
+    // --- nuke resolution (nuker decides; host backs up)
+    if (ball.state === "nuke") {
+      const late = t - (ball.t0 + ball.dur);
+      if ((ball.by === me.id && late > 350) || (isHost() && late > 1700)) resolveNuke(ball);
+    }
+
+    // --- round end (host). Waits a moment if someone could still REDO.
+    if (isHost() && roundRunning() && Object.keys(players).length >= 2) {
+      const alive = aliveIds();
+      if (alive.length <= 1) {
+        const canRedo = Object.keys(players).some(id => players[id].out && ((players[id].uses || {}).redo || 0) > 0);
+        if (!canRedo) endRound(alive[0]);
+        else if (!overPending) overPending = performance.now();
+        else if (performance.now() - overPending > REDO_GRACE_MS) endRound(alive[0]);
+      } else overPending = 0;
+    }
+  }
+
+  // clap animations from others
+  Object.entries(players).forEach(([id, p]) => {
+    if (p.clapAt && p.clapAt !== lastClapSeen[id]) {
+      if (lastClapSeen[id] !== undefined && id !== me.id) playClap();
+      lastClapSeen[id] = p.clapAt; clapFx[id] = performance.now();
+    }
+  });
+
+  draw(pos, t);
+  renderHud();
+  renderRulePanel();
+  requestAnimationFrame(loop);
+}
+
+// ---------------------------------------------------------------- HUD panels
+let lastHud = "";
+function renderHud() {
+  const mine = players[me.id] || {};
+  const abil = activeAbilities();
+  let a = "";
+  if (!abil.length) a = "<div style='color:#8a90a2'>No abilities in this room yet. Win a round to add some!</div>";
+  abil.forEach((id, i) => {
+    const R = RULES[id], left = (mine.uses || {})[id] || 0, why = canUse(id);
+    a += `<div class="ab ${why ? "off" : ""}"><kbd>${ABILITY_KEYS[i].toUpperCase()}</kbd><div><b>${R.icon} ${R.name}</b> <span class="tag">×${left}</span>
+          ${why ? `<div class="why">${why}</div>` : `<div class="why" style="color:#7ee787">Ready!</div>`}</div></div>`;
+  });
+  // stolen abilities that aren't in the room's 3 slots can't happen (stealing only copies room abilities)
+  let r = "";
+  const all = Object.keys(rules).filter(id => RULES[id]).sort((x, y) => rules[x] - rules[y]);
+  if (!all.length) r = "<div style='color:#8a90a2'>Classic rules. No extras yet.</div>";
+  all.forEach(id => {
+    const R = RULES[id];
+    const key = R.type === "ability" && abil.includes(id) ? ` <kbd>${ABILITY_KEYS[abil.indexOf(id)].toUpperCase()}</kbd>` : "";
+    r += `<div class="ab"><div><b>${R.icon} ${R.name}</b><span class="tag">${R.type}</span>${key}<div class="why">${R.desc}</div></div></div>`;
+  });
+  const html = a + "||" + r;
+  if (html !== lastHud) { lastHud = html; $("abilBox").innerHTML = a; $("rulesBox").innerHTML = r; }
+}
+
+// ---------------------------------------------------------------- drawing
+function draw(pos, t) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#262a35"; ctx.lineWidth = 2; ctx.setLineDash([6, 10]);
+  ctx.beginPath(); ctx.ellipse(480, 330, 350, 225, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+
+  const holder = ball && ball.state === "held" ? ball.holder : null;
+  const holderP = holder && players[holder];
+  const holderCharge = holder === me.id ? myCharge
+    : (holderP && holderP.chargeStart ? Math.min(0.97, Math.max(0, (t - holderP.chargeStart) / CHARGE_TIME)) : 0);
+  const holderAim = holder === me.id ? lockedTarget : (holderP ? holderP.aim : null);
+  const forced = holder ? forcedSet(holder).length > 0 : false;
+
+  // aim line
+  if (holder && holderAim && pos[holder] && pos[holderAim]) {
+    const a = pos[holder], b = pos[holderAim];
+    ctx.strokeStyle = forced ? "#c77dff" : chargeColor(holderCharge); ctx.globalAlpha = 0.85; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+    ctx.lineDashOffset = -performance.now() / 30;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const r = CUBE * 0.9 + Math.sin(performance.now() / 120) * 3;
+    ctx.strokeStyle = forced ? "#c77dff" : "#ff4d4d"; ctx.lineWidth = 3;
+    for (let i = 0; i < 4; i++) { const ang = i * Math.PI / 2 + Math.PI / 4; ctx.beginPath(); ctx.arc(b.x, b.y, r, ang - 0.4, ang + 0.4); ctx.stroke(); }
+    if (forced) { ctx.fillStyle = "#c77dff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.fillText("FORCED", (a.x + b.x) / 2, (a.y + b.y) / 2 - 8); }
+  }
+
+  // nuke target zone
+  if (ball && ball.state === "nuke") {
+    const p = Math.min(1, Math.max(0, progress(ball)));
+    ctx.strokeStyle = `rgba(255,60,60,${0.5 + Math.sin(performance.now() / 80) * 0.3})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(480, 330, 90 * (1 - p) + 20, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // players
+  seatIds().forEach(id => {
+    const p = players[id], q = pos[id]; if (!q) return;
+    const isHolder = id === holder;
+    let fill = p.out ? "#3a3d46" : (isHolder ? chargeColor(holderCharge) : p.color);
+    let sx = 0, sy = 0;
+    if (isHolder && holderCharge > 0.6) { const s = (holderCharge - 0.6) * 8; sx = (Math.random() - 0.5) * s; sy = (Math.random() - 0.5) * s; }
+
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(q.x - CUBE / 2 + 4 + sx, q.y - CUBE / 2 + 6 + sy, CUBE, CUBE);
+    ctx.fillStyle = fill; ctx.fillRect(q.x - CUBE / 2 + sx, q.y - CUBE / 2 + sy, CUBE, CUBE);
+    ctx.lineWidth = id === me.id ? 4 : 2; ctx.strokeStyle = id === me.id ? "#fff" : "rgba(255,255,255,0.25)";
+    if (pickMode === "counter" && isAlive(id) && id !== me.id && id !== holder) { ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 4; }
+    ctx.strokeRect(q.x - CUBE / 2 + sx, q.y - CUBE / 2 + sy, CUBE, CUBE);
+
+    if (p.out) {
+      ctx.strokeStyle = "#ff5252"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(q.x - 14, q.y - 14); ctx.lineTo(q.x + 14, q.y + 14); ctx.moveTo(q.x + 14, q.y - 14); ctx.lineTo(q.x - 14, q.y + 14); ctx.stroke();
+    }
+
+    ctx.fillStyle = p.out ? "#777" : "#fff"; ctx.font = "bold 15px system-ui"; ctx.textAlign = "center";
+    ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + CUBE / 2 + 20);
+
+    // status icons under name
+    let tags = [];
+    const d = doubles[id] || {};
+    const dk = Object.keys(d).filter(by => players[by]);
+    if (dk.length) tags.push(`⛓️ → ${dk.map(by => nm(by) + "×" + d[by]).join(", ")}`);
+    if (ball && ball.state === "held" && !ball.nullified && ball.anti && ball.anti[id] && aliveIds().length > 2) tags.push("🛡️ anti");
+    if (ball && ball.state === "nuke" && !p.out) tags.push(clappedFor(id, ball.t0) ? "✅" : "…");
+    if (tags.length) { ctx.font = "12px system-ui"; ctx.fillStyle = "#c9b8ff"; ctx.fillText(tags.join("  "), q.x, q.y + CUBE / 2 + 36); }
+
+    // empty bar outline = "they've got it and can throw"
+    if (isHolder && !p.out && !(ball.lockUntil && t < ball.lockUntil)) {
+      ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 36, q.y - CUBE / 2 - 23, 72, 11);
+    }
+    // double-force warnings for the holder
+    if (isHolder && ball && !ball.nullified) {
+      const req = forcedSet(id);
+      const deadBy = Object.keys(doubles[id] || {}).find(by => players[by] && players[by].out);
+      ctx.font = "bold 13px system-ui"; ctx.fillStyle = "#ff8a80";
+      if (deadBy) ctx.fillText(`⛓️ WARD NOW! ${Math.max(0, (DF_GRACE_MS - (t - (ball.heldSince || t))) / 1000).toFixed(1)}s`, q.x, q.y - CUBE / 2 - 46);
+      else if (req.length >= 2) ctx.fillText(`⛓️ ${req.length} forces: throwing = OUT (Ward / AC)`, q.x, q.y - CUBE / 2 - 46);
+    }
+    // throw bar
+    if (isHolder && holderCharge > 0.001) {
+      const w = 70, h = 9, bx = q.x - w / 2, by = q.y - CUBE / 2 - 22;
+      ctx.fillStyle = "#000a"; ctx.fillRect(bx - 2, by - 2, w + 4, h + 4);
+      ctx.fillStyle = chargeColor(holderCharge); ctx.fillRect(bx, by, w * holderCharge, h);
+    }
+    // hot potato timer
+    if (isHolder && hasRule("hotPotato") && ball.heldSince) {
+      const left = Math.max(0, (HOT_POTATO_MS - (t - ball.heldSince)) / 1000);
+      ctx.fillStyle = "#ffb74d"; ctx.font = "bold 14px system-ui"; ctx.fillText(`🥔 ${left.toFixed(1)}s`, q.x, q.y - CUBE / 2 - 30);
+    }
+
+    const cf = clapFx[id];
+    if (cf && performance.now() - cf < 500) {
+      const k = (performance.now() - cf) / 500;
+      ctx.globalAlpha = 1 - k; ctx.font = `${26 + k * 12}px system-ui`;
+      ctx.fillText("👏", q.x + 30, q.y - CUBE / 2 - 10 - k * 20);
+      ctx.globalAlpha = 1;
+    }
+  });
+
+  // ball
+  if (roundRunning()) {
+    let bx, by, scale = 1, fire = false;
+    if (ball.state === "held" && pos[ball.holder]) {
+      const h = pos[ball.holder], tgt = holderAim && pos[holderAim];
+      const ang = tgt ? Math.atan2(tgt.y - h.y, tgt.x - h.x) : 0;
+      bx = h.x + Math.cos(ang) * (CUBE * 0.75); by = h.y + Math.sin(ang) * (CUBE * 0.75);
+    } else if (ball.state === "flying" && pos[ball.from] && pos[ball.to]) {
+      const a = pos[ball.from], b = pos[ball.to], p = Math.min(1, Math.max(0, progress(ball)));
+      bx = a.x + (b.x - a.x) * p; by = a.y + (b.y - a.y) * p;
+      scale = 1 + Math.sin(p * Math.PI) * 0.6;
+      fire = ball.fireball && !ball.nullified;
+      if (ball.to === me.id && p >= CATCH_FROM) {
+        ctx.strokeStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(b.x, b.y, CUBE, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.font = "bold 18px system-ui"; ctx.textAlign = "center";
+        ctx.fillText(fire ? "🔥 DON'T CATCH!" : "SPACE!", b.x, b.y - CUBE - 8);
+      }
+    } else if (ball.state === "nuke" && pos[ball.by]) {
+      const a = pos[ball.by], p = Math.min(1, Math.max(0, progress(ball)));
+      bx = a.x + (480 - a.x) * p; by = a.y + (330 - a.y) * p;
+      scale = 1 + Math.sin(p * Math.PI) * 1.4;
+      fire = true;
+    }
+    if (bx !== undefined) {
+      const s = 16 * scale;
+      if (fire) { ctx.fillStyle = "rgba(255,87,34,0.35)"; ctx.beginPath(); ctx.arc(bx, by, s * 1.3, 0, Math.PI * 2); ctx.fill(); }
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(performance.now() / 150);
+      ctx.fillStyle = fire ? "#ff7043" : "#fff"; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.strokeStyle = fire ? "#bf360c" : "#ff9800"; ctx.lineWidth = 2; ctx.strokeRect(-s / 2, -s / 2, s, s);
+      ctx.restore();
+    }
+  }
+
+  // banners
+  ctx.textAlign = "center";
+  if (ball && ball.nullified && roundRunning()) { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#ff8a80"; ctx.fillText("⛔ ABSOLUTE COUNTER: no abilities this turn", 480, 30); }
+  if (pickMode === "counter") { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText("🎯 Click who they must throw to (Esc to cancel)", 480, 56); }
+  if (performance.now() < flash.until) { ctx.font = "bold 16px system-ui"; ctx.fillStyle = "#ffd54f"; ctx.fillText(flash.msg, 480, 620); }
+
+  // centre status
+  ctx.font = "bold 20px system-ui"; ctx.fillStyle = "#cfd3e0";
+  let msg = "";
+  const mine = players[me.id];
+  if (!ball || ball.state === "over") {
+    if (ball && ball.state === "over" && !ball.ruleChosen && players[ball.winner]) msg = ball.winner === me.id ? "Pick a rule!" : `🏆 ${nm(ball.winner)} won and is picking a rule…`;
+    else if (ball && ball.state === "over") msg = `${ball.winner ? "🏆 " + nm(ball.winner) + " won! " : ""}Press "Start new round"`;
+    else msg = `Waiting for players… (${Object.keys(players).length} in room). Press "Start new round"`;
+  } else if (ball.state === "nuke") msg = "☢️ NUKE! EVERYONE PRESS B!" + (hasRule("doubleClap") ? " (twice)" : "");
+  else if (mine && mine.out) msg = ((mine.uses || {}).redo > 0) ? "You're out. Use REDO to come back!" : "You're out. Watch the others!";
+  else if (iHaveBall()) {
+    if (hasRule("noJuke")) msg = "You've got the ball. SPACE throws instantly";
+    else msg = charging ? "Charging… let go to fake!" : "You've got the ball. Aim, then hold SPACE";
+  }
+  else if (ballComingToMe()) msg = ball.fireball && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
+  else msg = "Watch the thrower… B = clap, SPACE = catch";
+  ctx.fillText(msg, 480, 330);
+}
+</script>
+</body>
+</html>
