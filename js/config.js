@@ -11,3 +11,9 @@ const firebaseConfig = {
   messagingSenderId: "1041052423272",
   appId: "1:1041052423272:web:1a683a5df2385fd0b117dd"
 };
+
+// ======================================================================
+//  Your Cloudflare game server. After you upload the server (README step 5),
+//  paste its address here, e.g. "https://clap-catch-server.tim.workers.dev"
+// ======================================================================
+const SERVER_URL = "https://clap-catch-server.hamish-games.workers.dev";

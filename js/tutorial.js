@@ -106,7 +106,7 @@ const TUT_SLIDES = [
   },
   {
     title: "🏆 Competitive mode",
-    text: "Bring <b>your own 3 abilities</b> (equip them in Inventory). The winner can only add or remove <b>passive</b> rules. Press <b>Find a match</b> to play for points: <b>+25 per win</b>. If nobody else is online after 25 seconds, 4 bots join. Private rooms with a code don't give points.",
+    text: "Bring <b>your own 3 abilities</b> (equip them in Inventory). The winner can only add or remove <b>passive</b> rules. Press <b>Find a match</b> to play for points: <b>+25 per win</b> and <b>+5 for every player you get out</b>. Brave? Try <b>🎲 High Risk</b>: everyone bets points, the winner takes the pot. If nobody else is online after 25 seconds, 4 bots join. Private rooms with a code don't give points.",
     draw(c, t) {
       [["🔥", "J"], ["☢️", "K"], ["🧱", "L"]].forEach(([ic, key], i) => {
         const x = 70 + i * 74, y = 90;
@@ -185,7 +185,7 @@ function tutNext() {
   if (tutIdx < TUT_SLIDES.length - 1) { tutIdx++; showTutSlide(); return; }
   tutOpen = false;
   el("tutModal").style.display = "none";
-  if (tutFirstTime && UID) userRef(UID).update({ tutorialDone: true }).catch(e => console.error(e));
+  if (tutFirstTime) api("tutorialDone").catch(e => console.error(e));
 }
 function tutBack() { if (tutIdx > 0) { tutIdx--; showTutSlide(); } }
 el("tutNext").onclick = tutNext;

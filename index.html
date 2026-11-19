@@ -7,21 +7,28 @@
 <link rel="stylesheet" href="css/style.css">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 <h1>👏 CLAP CATCH</h1>
 
 <!-- ================= LOGIN ================= -->
 <div id="authScreen" class="screen">
-  <div class="card authCard">
+  <form class="card authCard" id="authForm" onsubmit="return false">
     <h2>Log in or create an account</h2>
     <input id="authUser" placeholder="Username" maxlength="16" autocomplete="username">
     <input id="authPass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
-    <div class="row"><button id="loginBtn">Log in</button><button id="signupBtn" class="secondary">Create account</button></div>
+    <div class="row"><button type="button" id="loginBtn">Log in</button><button type="button" id="signupBtn" class="secondary">Create account</button></div>
     <div id="authErr" class="err"></div>
     <div class="muted small">No email needed. There's no password reset, so if you forget your password the account is gone. Don't forget it!</div>
+  </form>
+</div>
+
+<!-- ================= BANNED ================= -->
+<div id="banScreen" class="screen" hidden>
+  <div class="card authCard center">
+    <h2>⛔ You're banned</h2>
+    <div>You can't play for another <b id="banTime">30:00</b>.</div>
+    <button type="button" id="banLogout" class="secondary">Log out</button>
   </div>
 </div>
 
@@ -36,6 +43,7 @@
     <button data-tab="play" class="active">▶ Play</button>
     <button data-tab="shop">🛒 Shop</button>
     <button data-tab="inv">🎒 Inventory</button>
+    <button data-tab="risk">🎲 High Risk</button>
     <button data-tab="trade">🤝 Trade <span id="tradeBadge"></span></button>
   </div>
 
@@ -53,6 +61,7 @@
     <div id="loadoutSummary" class="card small"></div>
     <div id="matchBox" class="card">
       <button id="matchBtn" class="big">🔎 Find a match <span class="small">(earns points)</span></button>
+      <div id="teamNote" class="small" style="color:#ffd27a;margin-bottom:6px"></div>
       <div class="muted small">Puts you in a room with other players. If nobody else is online after 25 seconds, 4 bots join (2 hard, 1 medium, 1 easy) so you can still play for points.</div>
     </div>
     <div class="card">
@@ -79,6 +88,15 @@
     <div id="invSkins" class="skinGrid"></div>
   </div>
 
+  <div id="tab-risk" class="tab" hidden>
+    <div class="warn">🎲 <b>High risk, high reward.</b> Everyone pays the stake when the game starts. One round, Competitive rules with your equipped abilities, no bots. <b>The winner takes the whole pot.</b> Leave or lose and your stake is gone. Tie = everyone gets it back. Getting people out still gives +5 each.</div>
+    <div class="card">
+      <h3 style="margin-top:0">Make a game</h3>
+      <div class="row"><label class="muted">Stake ⭐</label><input id="riskStake" type="number" min="5" value="20" style="max-width:140px"><button type="button" id="riskCreateBtn">Create High Risk game</button></div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Open games</h3><div id="riskGames"></div></div>
+  </div>
+
   <div id="tab-trade" class="tab" hidden>
     <div class="card">
       <h3 style="margin-top:0">New trade</h3>
@@ -98,6 +116,7 @@
     <span id="gamePoints" class="points"></span>
     <button id="startBtn">Start new round</button>
     <button id="removeBotsBtn" style="display:none;background:#555">Remove bots</button>
+    <button id="voteBotsBtn" style="display:none">🤖 Vote: add bots</button>
   </div>
   <canvas id="c" width="960" height="640"></canvas>
   <div id="controls">
@@ -136,12 +155,38 @@
   <div class="row tutNav"><button id="tutBack" class="secondary">← Back</button><button id="tutNext">Next →</button></div>
 </div></div>
 
+<div id="adminPanel"><div class="box">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">🛠️ Admin</h2><button type="button" id="adminClose" class="ghost">Close (P)</button></div>
+  <div class="card">
+    <h3 style="margin-top:0">🍀 Lucky next spin</h3>
+    <div class="muted small">Their next ability or skin pack gives the rarest item in it. They aren't told.</div>
+    <div class="row"><input id="adminLuckyUser" placeholder="Username" maxlength="16"><button type="button" id="adminLuckyBtn">Give lucky spin</button></div>
+    <div id="adminLuckyList" class="small"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">⚙️ Game settings</h3>
+    <div class="row" style="justify-content:space-between">
+      <div><b>Anti-teaming</b><div class="muted small">Same people in 3 matchmade games in a row → kept apart for the next 3.</div></div>
+      <button type="button" id="adminTeamBtn">…</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">⛔ Bans (30 minutes)</h3>
+    <div class="row"><input id="adminBanUser" placeholder="Username" maxlength="16"><button type="button" id="adminBanBtn" style="background:#c62828">Ban 30 min</button></div>
+    <div id="adminBanList" class="small"></div>
+  </div>
+</div></div>
+
 <div id="toast"></div>
 
 <script src="js/config.js"></script>
-<script src="js/data.js"></script>
-<script src="js/game.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/skins.js"></script>
+<script src="js/net.js"></script>
+<script src="js/game-net.js"></script>
+<script src="js/game-draw.js"></script>
 <script src="js/app.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/admin.js"></script>
 </body>
 </html>

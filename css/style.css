@@ -97,6 +97,10 @@
   #tutNext.waiting { background: linear-gradient(90deg, #2e7dff 0%, #2e7dff var(--p, 0%), #444 var(--p, 0%)); animation: tutfill .5s linear forwards; }
   @property --p { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
   @keyframes tutfill { from { --p: 0%; } to { --p: 100%; } }
+  #adminPanel { display: none; position: fixed; inset: 0; background: #000b; z-index: 26; align-items: center; justify-content: center; }
+  #adminPanel .box { background: #171a21; border-radius: 14px; padding: 18px; width: 620px; max-width: 94vw; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+  .adminRow { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid #2a2e3a; }
+  .adminRow button { padding: 5px 12px; font-size: 13px; }
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2e7dff; color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 600; transition: transform .25s, opacity .25s; z-index: 30; max-width: 90vw; opacity: 0; pointer-events: none; }
   #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   #toast.bad { background: #c62828; }
