@@ -69,7 +69,7 @@
     <div id="matchBox" class="card">
       <button id="matchBtn" class="big">🔎 Find a match <span class="small">(earns points)</span></button>
       <div id="teamNote" class="small" style="color:#ffd27a;margin-bottom:6px"></div>
-      <div class="muted small">Puts you in a room with other players. If nobody else is online after 25 seconds, 4 bots join (2 hard, 1 medium, 1 easy) so you can still play for points.</div>
+      <div class="muted small">Puts you in a room with other players. If nobody else is online after 25 seconds, 4 bots join so you can still play for points. Most bots are medium; hard ones are rare (10%), easy ones 25%.</div>
     </div>
     <div class="card">
       <div id="privateWarn" class="warn">⚠️ <b>Private Competitive rooms don't give points.</b> Otherwise people could farm points with alt accounts. Use <b>Find a match</b> to earn points.</div>
@@ -197,6 +197,15 @@
     <div id="adminLuckyList" class="small"></div>
   </div>
   <div class="card">
+    <h3 style="margin-top:0">🎯 Near miss next spin</h3>
+    <div class="muted small">On their next pack, the rarest item in it lands right next to theirs (one side, or both sides for a double).
+      Whatever they actually get is still rolled normally (or the rarest, if they also have a lucky spin). They aren't told.</div>
+    <div class="row"><input id="adminNearUser" placeholder="Username" maxlength="16">
+      <select id="adminNearLevel"><option value="1">Near miss</option><option value="2">Double near miss</option></select>
+      <button type="button" id="adminNearBtn">Set</button></div>
+    <div id="adminNearList" class="small"></div>
+  </div>
+  <div class="card">
     <h3 style="margin-top:0">⏳ Limited-time events</h3>
     <div class="muted small">One at a time. It switches itself off when the timer runs out. Trading is free while any event is on.</div>
     <div id="adminEventNow" class="small" style="margin:6px 0"></div>
@@ -261,5 +270,6 @@
 <script src="js/app.js"></script>
 <script src="js/tutorial.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/star.js"></script>
 </body>
 </html>

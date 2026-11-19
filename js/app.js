@@ -277,32 +277,56 @@ function renderShop() {
 async function buyPack(kind, pid) {
   if (busy) return;
   busy = true;
-  try { const r = await api("buy", { kind, pack: pid }); showRoll(kind, pid, r.prize, r.rarity, r.count, r.me, r.isSkin); }
+  try { const r = await api("buy", { kind, pack: pid }); showRoll(kind, pid, r.prize, r.rarity, r.count, r.me, r.isSkin, r.near); }
   catch (e) { toast(e.message, true); busy = false; }
 }
-function showRoll(kind0, pid, prize, rarity, count, newMe, isSkin) {
+// Opening a pack: a strip of items spins past and slows down onto yours. Your item (and the two
+// next to it) were already decided by the server; the rest of the strip is just random filler.
+const REEL_CELL = 104, REEL_LEN = 46, REEL_AT = 38, REEL_MS = 5600;
+function packItems(kind0, pid) {
+  const ev = currentEvent(), lucky = ev && ev.id === "lucky";
+  let items = kind0 === "limited" ? LIMITED_PACKS[pid].items : kind0 === "ability" ? ABILITY_PACKS[pid].items
+    : SKIN_PACKS[pid].skins.map((sid, i) => [sid, SKIN_ODDS[i][1], SKIN_ODDS[i][0]]);
+  return lucky && kind0 !== "limited" ? luckyOdds(items) : items;
+}
+function reelCell(id, isSkin) {
+  const r = isSkin ? (SKINS[id] && SKINS[id].rarity) || "common" : abilityRarity(id);
+  const look = isSkin ? `<canvas class="skinprev" data-skin="${id}" width="56" height="56"></canvas>` : `<div class="reelIcon">${RULES[id].icon}</div>`;
+  return `<div class="reelCell r-${r}" style="--rc:${RARITY[r].color}">${look}<div class="reelName">${esc(isSkin ? SKINS[id].name : RULES[id].name)}</div></div>`;
+}
+function showRoll(kind0, pid, prize, rarity, count, newMe, isSkin, near) {
   const pack = kind0 === "limited" ? LIMITED_PACKS[pid] : kind0 === "ability" ? ABILITY_PACKS[pid] : SKIN_PACKS[pid];
-  const kind = (kind0 === "skin" || isSkin) ? "skin" : "ability";
-  const pool = pack.items ? pack.items.map(i => i[0]) : pack.skins;
+  const skin = kind0 === "skin" || !!isSkin;
+  const items = packItems(kind0, pid), total = items.reduce((a, b) => a + b[1], 0);
+  const pickRandom = () => { let r = Math.random() * total; for (const it of items) if ((r -= it[1]) < 0) return it[0]; return items[0][0]; };
+  const strip = [];
+  for (let i = 0; i < REEL_LEN; i++) strip.push(i === REEL_AT ? prize : i === REEL_AT - 1 && near ? near[0] : i === REEL_AT + 1 && near ? near[1] : pickRandom());
   const box = el("rollBox");
   el("rollModal").style.display = "flex"; el("rollClose").hidden = true;
   el("rollTitle").textContent = `Opening ${pack.name}…`;
-  let n = 0;
-  const spin = setInterval(() => {
-    const id = pool[n++ % pool.length];
-    box.innerHTML = kind === "ability" ? `<div class="bigIcon">${RULES[id].icon}</div>` : `<canvas class="skinprev big" data-skin="${id}" width="96" height="96"></canvas>`;
-  }, 90);
-  setTimeout(() => {
-    clearInterval(spin);
-    const name = kind === "ability" ? RULES[prize].name : SKINS[prize].name;
+  box.innerHTML = `<div class="reel"><div class="reelStrip">${strip.map(id => reelCell(id, skin)).join("")}</div><div class="reelMarker"></div></div><div id="rollResult"></div>`;
+  const reel = box.querySelector(".reel"), st = box.querySelector(".reelStrip");
+  const viewW = reel.clientWidth || 560;
+  const jitter = (Math.random() - 0.5) * REEL_CELL * 0.7;              // land somewhere inside your item, not always dead centre
+  const end = REEL_AT * REEL_CELL + REEL_CELL / 2 - viewW / 2 + jitter;
+  const t0 = performance.now(); let lastCell = -1;
+  (function frame() {
+    const k = Math.min(1, (performance.now() - t0) / REEL_MS), e = 1 - Math.pow(1 - k, 4);
+    const x = end * e;
+    st.style.transform = `translateX(${-x}px)`;
+    const cell = Math.floor((x + viewW / 2) / REEL_CELL);
+    if (cell !== lastCell) { lastCell = cell; playTone(1400, 0.03, "square", 0.05); }
+    if (k < 1) { requestAnimationFrame(frame); return; }
+    st.children[REEL_AT].classList.add("won");
+    const name = skin ? SKINS[prize].name : RULES[prize].name;
     el("rollTitle").innerHTML = `You got <span class="rar-${rarity}" style="color:${RARITY[rarity].color}">${RARITY[rarity].label}</span>!`;
-    if (rarity === "mythical" || rarity === "legendary") el("rollModal").classList.add("rare-" + rarity), setTimeout(() => el("rollModal").classList.remove("rare-" + rarity), 2500);
-    box.innerHTML = (kind === "ability" ? `<div class="bigIcon">${RULES[prize].icon}</div>` : `<canvas class="skinprev big" data-skin="${prize}" width="96" height="96"></canvas>`) +
-      `<div class="rollName" style="color:${RARITY[rarity].color}">${esc(name)}</div>` + (count > 1 ? `<div class="muted small">You now have ${count}. Extras can be traded!</div>` : "");
+    if (rarity === "mythical" || rarity === "legendary") { el("rollModal").classList.add("rare-" + rarity); setTimeout(() => el("rollModal").classList.remove("rare-" + rarity), 2500); playTone(880, 0.5, "triangle", 0.2); }
+    el("rollResult").innerHTML = `<div class="rollName" style="color:${RARITY[rarity].color}">${skin ? "" : RULES[prize].icon + " "}${esc(name)}</div>` +
+      (count > 1 ? `<div class="muted small">You now have ${count}. Extras can be traded!</div>` : "");
     el("rollClose").hidden = false;
     setProfile(newMe);
     busy = false;
-  }, 1500);
+  })();
 }
 el("rollClose").onclick = () => el("rollModal").style.display = "none";
 

@@ -18,6 +18,10 @@ async function adminDo(op, args, msg) {
   try { await api(op, args); if (msg) toast(msg); refreshAdmin(); } catch (e) { toast(e.message, true); }
 }
 el("adminLuckyBtn").onclick = () => { const u = el("adminLuckyUser").value.trim(); adminDo("adminLucky", { username: u, on: true }, `🍀 ${u}'s next pack will be the rarest item`); el("adminLuckyUser").value = ""; };
+el("adminNearBtn").onclick = () => {
+  const u = el("adminNearUser").value.trim(), lv = +el("adminNearLevel").value;
+  adminDo("adminNearMiss", { username: u, level: lv }, `🎯 ${u}'s next pack: ${lv === 2 ? "double near miss" : "near miss"}`); el("adminNearUser").value = "";
+};
 el("adminBanBtn").onclick = () => { const u = el("adminBanUser").value.trim(); adminDo("adminBan", { username: u, on: true }, `⛔ ${u} is banned for 30 minutes`); el("adminBanUser").value = ""; };
 el("adminEventId").innerHTML = Object.entries(EVENTS).map(([id, e]) => `<option value="${id}">${e.icon} ${e.name}</option>`).join("");
 el("adminEventBtn").onclick = () => {
@@ -42,6 +46,9 @@ async function refreshAdmin() {
     el("adminLuckyList").innerHTML = d.lucky.map(l =>
       `<div class="adminRow"><span>🍀 <b>${esc(l.username)}</b> (waiting for their next pack)</span><button type="button" class="secondary" data-unlucky="${esc(l.username)}">Cancel</button></div>`).join("");
     document.querySelectorAll("[data-unban]").forEach(b => b.onclick = () => adminDo("adminBan", { username: b.dataset.unban, on: false }, `✅ ${b.dataset.unban} is unbanned`));
+    el("adminNearList").innerHTML = (d.near || []).map(l =>
+      `<div class="adminRow"><span>🎯 <b>${esc(l.username)}</b> (${l.level === 2 ? "double near miss" : "near miss"}, waiting for their next pack)</span><button type="button" class="secondary" data-unnear="${esc(l.username)}">Cancel</button></div>`).join("");
+    document.querySelectorAll("[data-unnear]").forEach(b => b.onclick = () => adminDo("adminNearMiss", { username: b.dataset.unnear, level: 0 }, "Near miss removed"));
     document.querySelectorAll("[data-unlucky]").forEach(b => b.onclick = () => adminDo("adminLucky", { username: b.dataset.unlucky, on: false }, "Lucky spin removed"));
   } catch (e) { toast("Couldn't load admin lists: " + e.message, true); }
 }

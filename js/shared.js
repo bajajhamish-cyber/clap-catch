@@ -92,6 +92,11 @@ const EVENTS = {
 };
 const GOLDEN_JACKPOT = 1 / 10000;
 const JACKPOT_PRIZES = ["fireball", "absoluteCounter", "nuke"];
+// Bonus Star: one pops up for everyone at the same moment, once every 10 minutes, for 60 seconds.
+// The exact moment inside each 10 minutes is different every time (but the same for everybody).
+const STAR = { EVERY: 10 * 60 * 1000, SHOW: 60 * 1000, ODDS: [[5, 80], [10, 15], [25, 5]] };
+function starAt(w) { const h = Math.imul((w ^ 0x5bd1e995) >>> 0, 2654435761) >>> 0; return w * STAR.EVERY + (h % 540) * 1000; }
+function starReward(r) { let x = r * 100; for (const [n, pct] of STAR.ODDS) { if ((x -= pct) < 0) return n; } return STAR.ODDS[0][0]; }
 // Lucky event: every legendary/mythical item +1.5%, taken from the most common item
 function luckyOdds(items) {
   const out = items.map(it => it.slice());

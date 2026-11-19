@@ -164,3 +164,32 @@ body.ev-golden .tabs button.active { background: linear-gradient(180deg, #ffd54f
 .keyBtn { min-width: 110px; background: #2a2e3a; }
 .keyBtn.waiting { background: #ff9800; color: #111; }
 #controls a { color: #9ec2ff; }
+
+/* ---- Bonus Star ---- */
+#bonusStar { display: none; position: fixed; z-index: 95; font-size: 64px; cursor: pointer; user-select: none; line-height: 1;
+  filter: drop-shadow(0 0 14px #ffd54f) drop-shadow(0 0 30px #ffb300); animation: starFloat 2.4s ease-in-out infinite; }
+#bonusStar.on { display: block; }
+#bonusStar:hover { transform: scale(1.15); }
+@keyframes starFloat { 0%, 100% { transform: translateY(0) rotate(-8deg) scale(1); } 50% { transform: translateY(-14px) rotate(8deg) scale(1.08); } }
+.starPop { position: fixed; z-index: 96; font-size: 34px; font-weight: 800; color: #ffd54f; text-shadow: 0 0 12px #000, 0 0 20px #ffb300; pointer-events: none; animation: starPop 1.6s ease-out forwards; }
+.starPop.mid { font-size: 44px; color: #fff176; }
+.starPop.big { font-size: 60px; color: #ff4dff; text-shadow: 0 0 20px #ff4dff; }
+@keyframes starPop { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-80px); opacity: 0; } }
+
+/* ---- pack opening reel ---- */
+#rollModal .box { max-width: 96vw; }
+.reel { position: relative; width: 560px; max-width: 86vw; height: 128px; overflow: hidden; border-radius: 10px; background: #12141a;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
+.reelStrip { display: flex; height: 100%; will-change: transform; }
+.reelCell { flex: 0 0 96px; margin: 8px 4px; border-radius: 8px; background: #262a35; border-bottom: 5px solid var(--rc); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; box-shadow: inset 0 -30px 30px -30px var(--rc); }
+.reelCell.r-legendary { background: #3a2f12; }
+.reelCell.r-mythical { background: #3a1240; }
+.reelCell.won { outline: 3px solid #fff; box-shadow: 0 0 24px var(--rc); }
+.reelIcon { font-size: 40px; }
+.reelName { font-size: 11px; color: #cfd3e0; text-align: center; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px; }
+.reelMarker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #ffd54f; box-shadow: 0 0 10px #ffd54f; }
+.reelMarker::before, .reelMarker::after { content: ""; position: absolute; left: -7px; border: 8px solid transparent; }
+.reelMarker::before { top: 0; border-top-color: #ffd54f; }
+.reelMarker::after { bottom: 0; border-bottom-color: #ffd54f; }
+#rollResult { min-height: 54px; text-align: center; }
