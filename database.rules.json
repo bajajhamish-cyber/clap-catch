@@ -1,31 +1,6 @@
 {
   "rules": {
     ".read": false,
-    ".write": false,
-    "matchmaking": {
-      ".read": "auth != null",
-      ".write": "auth != null"
-    },
-    "rooms": {
-      ".read": "auth != null",
-      "$room": {
-        ".write": "auth != null",
-        ".validate": "$room.length <= 16 && $room.matches(/^[A-Z0-9]+$/)",
-        "players": {
-          "$pid": {
-            "name": { ".validate": "newData.isString() && newData.val().length <= 20" }
-          }
-        },
-        "log": {
-          "$msg": {
-            "msg": { ".validate": "newData.isString() && newData.val().length <= 300" }
-          }
-        },
-        "ball": {},
-        "rules": {},
-        "doubles": {},
-        "$other": { ".validate": false }
-      }
-    }
+    ".write": false
   }
 }

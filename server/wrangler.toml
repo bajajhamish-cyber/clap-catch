@@ -1,0 +1,21 @@
+name = "clap-catch-server"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+# keep anything you add in the Cloudflare dashboard when you deploy again
+keep_vars = true
+
+[[durable_objects.bindings]]
+name = "BANK"
+class_name = "Bank"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Bank", "Lobby", "Room"]
