@@ -14,6 +14,7 @@ function renderRulePanel() {
   add.innerHTML = ""; rem.innerHTML = "";
   Object.entries(RULES).forEach(([id, r]) => {
     if (MODE === "competitive" && r.type !== "passive") return;
+    if (r.limited) return;
     const b = document.createElement("button");
     const active = hasRule(id);
     b.className = active ? "rem" : "add";
@@ -49,9 +50,22 @@ function renderHud() {
   if (html !== lastHud) { lastHud = html; $("abilBox").innerHTML = a; $("rulesBox").innerHTML = r; }
 }
 
-function draw(pos, t) {
+function rusherPos(pos, id) {           // Bull Rush / Stampede: the rusher runs to the holder and back
+  if (!ball || ball.state !== "rush" || ball.by !== id || !pos[id] || !pos[ball.victim]) return pos[id];
+  const k = Math.min(1, Math.max(0, (now() - ball.t0) / ball.dur)), f = (k < 0.5 ? k * 2 : (1 - k) * 2) * 0.85;
+  return { x: pos[id].x + (pos[ball.victim].x - pos[id].x) * f, y: pos[id].y + (pos[ball.victim].y - pos[id].y) * f };
+}
+function draw(pos0, t) {
+  const pos = Object.assign({}, pos0);
+  draw.ballAt = null;
+  if (ball && ball.state === "rush") pos[ball.by] = rusherPos(pos0, ball.by);
+  const mirage = fxOn("mirage") && fx.mirage.by !== me.id;
+  const golden = EVENT_ID === "golden", blackout = EVENT_ID === "blackout";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "#262a35"; ctx.lineWidth = 2; ctx.setLineDash([6, 10]);
+  ctx.save();
+  if (fxOn("quake") && fx.quake.by !== me.id) ctx.translate((Math.random() - 0.5) * 18, (Math.random() - 0.5) * 18);
+  if (golden) { const g = ctx.createRadialGradient(480, 330, 60, 480, 330, 520); g.addColorStop(0, "#4a3a08"); g.addColorStop(1, "#1f1803"); ctx.fillStyle = g; ctx.fillRect(-20, -20, 1000, 680); }
+  ctx.strokeStyle = golden ? "#8a6d12" : "#262a35"; ctx.lineWidth = 2; ctx.setLineDash([6, 10]);
   ctx.beginPath(); ctx.ellipse(480, 330, 350, 225, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
 
   const holder = ball && ball.state === "held" ? ball.holder : null;
@@ -89,19 +103,22 @@ function draw(pos, t) {
     let sx = 0, sy = 0;
     if (isHolder && holderCharge > 0.6) { const s = (holderCharge - 0.6) * 8; sx = (Math.random() - 0.5) * s; sy = (Math.random() - 0.5) * s; }
 
-    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(q.x - CUBE / 2 + 4 + sx, q.y - CUBE / 2 + 6 + sy, CUBE, CUBE);
-    const X = q.x - CUBE / 2 + sx, Y = q.y - CUBE / 2 + sy;
-    if (p.out) { ctx.fillStyle = "#3a3d46"; ctx.fillRect(X, Y, CUBE, CUBE); }
+    const gr = gripOf(id), C = gr && gr.giant ? CUBE * 1.5 : CUBE;
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(q.x - C / 2 + 4 + sx, q.y - C / 2 + 6 + sy, C, C);
+    const X = q.x - C / 2 + sx, Y = q.y - C / 2 + sy;
+    if (p.out) { ctx.fillStyle = "#3a3d46"; ctx.fillRect(X, Y, C, C); }
     else {
-      drawSkin(ctx, p.skin || "default", X, Y, CUBE, p.color, performance.now());
+      if (mirage) { ctx.fillStyle = "#8e8e9e"; ctx.fillRect(X, Y, C, C); }
+      else drawSkin(ctx, p.skin || "default", X, Y, C, p.color, performance.now());
       if (isHolder) {   // the charge colour still shows over any skin: green -> red -> dark red
         ctx.globalAlpha = 0.55 + 0.45 * holderCharge; ctx.fillStyle = chargeColor(holderCharge);
-        ctx.fillRect(X, Y, CUBE, CUBE); ctx.globalAlpha = 1;
+        ctx.fillRect(X, Y, C, C); ctx.globalAlpha = 1;
       }
+      if (ball && ball.bounty === id && !mirage) { ctx.font = "22px system-ui"; ctx.textAlign = "center"; ctx.fillText("💰", q.x + C / 2, q.y - C / 2 + 4); }
     }
     ctx.lineWidth = id === me.id ? 4 : 2; ctx.strokeStyle = id === me.id ? "#fff" : "rgba(255,255,255,0.25)";
-    if (pickMode === "counter" && isAlive(id) && id !== me.id && id !== holder) { ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 4; }
-    ctx.strokeRect(q.x - CUBE / 2 + sx, q.y - CUBE / 2 + sy, CUBE, CUBE);
+    if (pickMode && pickValid(pickMode, id)) { ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 4; }
+    ctx.strokeRect(q.x - C / 2 + sx, q.y - C / 2 + sy, C, C);
 
     if (p.out) {
       ctx.strokeStyle = "#ff5252"; ctx.lineWidth = 4;
@@ -109,7 +126,8 @@ function draw(pos, t) {
     }
 
     ctx.fillStyle = p.out ? "#777" : "#fff"; ctx.font = "bold 15px system-ui"; ctx.textAlign = "center";
-    ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + CUBE / 2 + 20);
+    if (!mirage) ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + C / 2 + 20);
+    else if (id === me.id) ctx.fillText("(you)", q.x, q.y + C / 2 + 20);
 
     // status icons under name
     let tags = [];
@@ -121,6 +139,16 @@ function draw(pos, t) {
     if (!p.out && (p.braceUntil || 0) > t) tags.push("🧱 braced");
     if (ball && ball.state === "held" && ball.holder === id && ball.fast && !ball.nullified) tags.push("⏩ fast throw");
     if (ball && ball.state === "held" && ball.holder === id && ball.decoy && !ball.nullified && id === me.id) tags.push("🪞 decoy on");
+    const heldBy = ball && ball.state === "held" && ball.holder === id && !ball.nullified;
+    if (heldBy && ball.slow) tags.push("🌟 slow throw");
+    if (heldBy && ball.warcry) tags.push("📢 can't stop!");
+    if (heldBy && id === me.id && ball.ghost) tags.push("👻 ghost throw");
+    if (heldBy && id === me.id && ball.hellfire) tags.push("😈 hellfire");
+    if (heldBy && id === me.id && ball.phantom) tags.push("🎭 phantom");
+    if (!p.out && p.cornered && TURN < p.cornered) tags.push("🦬 neighbours only");
+    if (!p.out && gr && !gr.giant) tags.push("🙌 wide grip");
+    if (p.out && id === me.id && canUse("vengeance") === "") tags.push("🗡️ VENGEANCE ready!");
+    if (mirage) tags = [];
     if (tags.length) { ctx.font = "12px system-ui"; ctx.fillStyle = "#c9b8ff"; ctx.fillText(tags.join("  "), q.x, q.y + CUBE / 2 + 36); }
 
     // empty bar outline = "they've got it and can throw"
@@ -164,33 +192,61 @@ function draw(pos, t) {
       const ang = tgt ? Math.atan2(tgt.y - h.y, tgt.x - h.x) : 0;
       bx = h.x + Math.cos(ang) * (CUBE * 0.75); by = h.y + Math.sin(ang) * (CUBE * 0.75);
     } else if (ball.state === "flying" && pos[ball.from] && pos[ball.to]) {
-      const a = pos[ball.from], b = pos[ball.to], p = Math.min(1, Math.max(0, localProgress(ball)));
+      let a = pos[ball.from];
+      const b = pos[ball.to], p = Math.min(1, Math.max(0, localProgress(ball)));
+      if (ball.mid && pos[ball.mid.from] && pos[ball.mid.to]) {        // Angelic Scream: starts from where it was turned back
+        const m = ball.mid; a = { x: pos[m.from].x + (pos[m.to].x - pos[m.from].x) * m.p, y: pos[m.from].y + (pos[m.to].y - pos[m.from].y) * m.p };
+        const w = (now() - ball.t0) / 500;
+        if (w < 1) { ctx.strokeStyle = `rgba(255,255,200,${1 - w})`; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(pos[ball.from].x, pos[ball.from].y, 30 + w * 80 + i * 18, 0, Math.PI * 2); ctx.stroke(); } }
+      }
       bx = a.x + (b.x - a.x) * p; by = a.y + (b.y - a.y) * p;
       scale = 1 + Math.sin(p * Math.PI) * 0.6;
-      fire = ball.fireball && !ball.nullified;
-      if (ball.to === me.id && p >= CATCH_FROM) {
+      fire = !ball.nullified && (ball.fireball || (ball.hellfire && p >= 0.8));
+      if (ball.ghost && !ball.nullified && ball.from !== me.id && p < 0.9) bx = undefined;       // Ghost Ball: invisible until it's nearly there
+      if (ball.fake && pos[ball.fake] && !ball.nullified) {                                       // Phantom Throw: a see-through fake
+        const f = pos[ball.fake], fx2 = a.x + (f.x - a.x) * p, fy2 = a.y + (f.y - a.y) * p, s2 = 16 * scale;
+        ctx.save(); ctx.globalAlpha = 0.3; ctx.translate(fx2, fy2); ctx.rotate(performance.now() / 150);
+        ctx.fillStyle = "#fff"; ctx.fillRect(-s2 / 2, -s2 / 2, s2, s2); ctx.restore();
+      }
+      const ghostHide = ball.ghost && !ball.nullified && p < 0.9;
+      if (ball.to === me.id && p >= myCatchFrom() && !ghostHide) {
         ctx.strokeStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(b.x, b.y, CUBE, 0, Math.PI * 2); ctx.stroke();
         ctx.fillStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.font = "bold 18px system-ui"; ctx.textAlign = "center";
         ctx.fillText(fire ? "🔥 DON'T CATCH!" : "SPACE!", b.x, b.y - CUBE - 8);
       }
+    } else if (ball.state === "rush" && pos[ball.by] && (now() - ball.t0) / ball.dur > 0.5) {
+      bx = pos[ball.by].x; by = pos[ball.by].y - CUBE * 0.7;
     } else if (ball.state === "nuke" && pos[ball.by]) {
       const a = pos[ball.by], p = Math.min(1, Math.max(0, localProgress(ball)));
       bx = a.x + (480 - a.x) * p; by = a.y + (330 - a.y) * p;
       scale = 1 + Math.sin(p * Math.PI) * 1.4;
       fire = true;
     }
+    draw.ballAt = bx !== undefined ? { x: bx, y: by } : null;
     if (bx !== undefined) {
       const s = 16 * scale;
       if (fire) { ctx.fillStyle = "rgba(255,87,34,0.35)"; ctx.beginPath(); ctx.arc(bx, by, s * 1.3, 0, Math.PI * 2); ctx.fill(); }
       ctx.save(); ctx.translate(bx, by); ctx.rotate(performance.now() / 150);
-      ctx.fillStyle = fire ? "#ff7043" : "#fff"; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.fillStyle = fire ? "#ff7043" : ball.jackpot ? `hsl(${(performance.now() / 4) % 360},90%,60%)` : "#fff"; ctx.fillRect(-s / 2, -s / 2, s, s);
       ctx.strokeStyle = fire ? "#bf360c" : "#ff9800"; ctx.lineWidth = 2; ctx.strokeRect(-s / 2, -s / 2, s, s);
       ctx.restore();
     }
   }
 
+  // Blackout: everything dark except glowing players and the ball
+  if (blackout) {
+    const dk = draw.dark || (draw.dark = document.createElement("canvas")); dk.width = 960; dk.height = 640;
+    const d = dk.getContext("2d"); d.fillStyle = "rgba(0,0,0,0.93)"; d.fillRect(0, 0, 960, 640); d.globalCompositeOperation = "destination-out";
+    const hole = (x, y, r) => { const g = d.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(1, "rgba(0,0,0,0)"); d.fillStyle = g; d.fillRect(x - r, y - r, r * 2, r * 2); };
+    Object.values(pos).forEach(q => hole(q.x, q.y + 8, 62));
+    if (draw.ballAt) hole(draw.ballAt.x, draw.ballAt.y, 70);
+    ctx.drawImage(dk, 0, 0);
+  }
   // banners
+  if (EVENT_ID && EVENTS[EVENT_ID]) { ctx.font = "bold 14px system-ui"; ctx.textAlign = "left"; ctx.fillStyle = golden ? "#ffd54f" : "#c9b8ff"; ctx.fillText(`${EVENTS[EVENT_ID].icon} ${EVENTS[EVENT_ID].name}`, 14, 24); }
+  if (ball && ball.jackpot && roundRunning()) { ctx.font = "bold 15px system-ui"; ctx.textAlign = "right"; ctx.fillStyle = `hsl(${(performance.now() / 4) % 360},90%,65%)`; ctx.fillText("🌈 JACKPOT GAME: win for a free legendary!", 946, 24); }
+  if (fxOn("flash") && fx.flash.by !== me.id && now() < fx.flash.at) { ctx.font = "bold 34px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#fff176"; ctx.fillText("⚡ FLASH INCOMING ⚡", 480, 200); }
   if (roundRunning() && aliveIds().length === 2) {
     const next = Math.max(MIN_FLIGHT, FLIGHT_TIME * Math.pow(DUEL_SPEEDUP, (ball.duel || 0) + 1));
     ctx.font = "bold 16px system-ui"; ctx.fillStyle = "#ffd54f"; ctx.textAlign = "center";
@@ -198,7 +254,7 @@ function draw(pos, t) {
   }
   ctx.textAlign = "center";
   if (ball && ball.nullified && roundRunning()) { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#ff8a80"; ctx.fillText("⛔ FULL COUNTER: no abilities this turn", 480, 30); }
-  if (pickMode === "counter") { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText("🎯 Click who they must throw to (Esc to cancel)", 480, 56); }
+  if (pickMode) { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText(`${RULES[pickMode].icon} Click ${TARGET_ABILITIES[pickMode]} (Esc to cancel)`, 480, 56); }
   if (performance.now() < flash.until) { ctx.font = "bold 16px system-ui"; ctx.fillStyle = "#ffd54f"; ctx.fillText(flash.msg, 480, 620); }
 
   // ability buttons, bottom left
@@ -231,20 +287,46 @@ function draw(pos, t) {
     msg = ball.winner ? `🎲 ${nm(ball.winner)} won ⭐ ${ball.pot}! Press ← Leave` : "🤝 Tie: stakes refunded. Press ← Leave";
   } else if (ball && ball.state === "lobby") {
     const humans = humanCount();
-    if (ball.startAt) msg = `Match found! ${humans} players. Starting in ${Math.max(0, Math.ceil((ball.startAt - now()) / 1000))}s`;
+    if (S && S.friendsOnly) msg = `👥 Only friends here. Waiting for someone else… bots join in ${Math.max(0, Math.ceil((BOT_WAIT_MS - (now() - (ball.createdAt || now()))) / 1000))}s`;
+    else if (ball.startAt) msg = `Match found! ${humans} players. Starting in ${Math.max(0, Math.ceil((ball.startAt - now()) / 1000))}s`;
     else msg = `🔎 Looking for players… bots join in ${Math.max(0, Math.ceil((BOT_WAIT_MS - (now() - (ball.createdAt || now()))) / 1000))}s`;
   } else if (!ball || ball.state === "over") {
     if (ball && ball.state === "over" && !ball.ruleChosen && players[ball.winner]) msg = ball.winner === me.id ? "Pick a rule!" : `🏆 ${nm(ball.winner)} won and is picking a rule…`;
     else if (ball && ball.state === "over") msg = `${ball.winner ? "🏆 " + nm(ball.winner) + " won! " : ""}${IS_PUBLIC ? "Next round starting…" : 'Press "Start new round"'}`;
     else msg = `Waiting for players… (${Object.keys(players).length} in room). Press "Start new round"`;
-  } else if (ball.state === "nuke") msg = "☢️ NUKE! EVERYONE PRESS B!" + (hasRule("doubleClap") ? " (twice)" : "");
-  else if (mine && mine.out) msg = ((mine.uses || {}).redo > 0) ? "You're out. Use REDO to come back!" : "You're out. Watch the others!";
+  } else if (ball.state === "wheel") msg = "";
+  else if (ball.state === "rush") msg = `🐂 ${nm(ball.by)} is charging at ${nm(ball.victim)}!`;
+  else if (ball.state === "nuke") msg = "☢️ NUKE! EVERYONE PRESS B!" + (hasRule("doubleClap") ? " (twice)" : "");
+  else if (mine && mine.out) msg = ((mine.uses || {}).redo > 0) ? "You're out. Use REDO to come back!" : canUse("vengeance") === "" ? "You're out… use VENGEANCE now!" : "You're out. Watch the others!";
   else if (iHaveBall()) {
     if (hasRule("noJuke")) msg = "You've got the ball. SPACE throws instantly";
     else msg = charging ? "Charging… let go to fake!" : "You've got the ball. Aim, then hold SPACE";
   }
-  else if (ballComingToMe()) msg = ball.fireball && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
+  else if (ballComingToMe() && ball.ghost && !ball.nullified && localProgress(ball) < 0.9) msg = "Watch the thrower… B = clap, SPACE = catch";
+  else if (ballComingToMe()) msg = (ball.fireball || (ball.hellfire && localProgress(ball) >= 0.8)) && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
   else if (ball.state === "held" && !ball.nullified && (doubles[ball.holder] || {})[me.id]) msg = `G G G to sacrifice and take ${nm(ball.holder)} out with you`;
   else msg = "Watch the thrower… B = clap, SPACE = catch";
   ctx.fillText(msg, 480, 330);
+  if (ball && ball.state === "wheel") drawWheel();      // Devil's Deal: covers everything while it spins
+  ctx.restore();
+}
+function drawWheel() {
+  const b = ball, k = Math.min(1, Math.max(0, (now() - b.t0) / b.dur));
+  ctx.fillStyle = "rgba(10,0,0,0.75)"; ctx.fillRect(0, 0, 960, 640);
+  const cx = 480, cy = 320, r = 150, slices = 10;
+  // spin fast, then slow down and land on the result (slice 0 = STEAL)
+  const land = b.win ? 0 : 1 + (b.t0 % 8);
+  const final = -Math.PI / 2 - (land + 0.5) * (Math.PI * 2 / slices) + Math.PI * 2 * 6;
+  const ang = final * (1 - Math.pow(1 - k, 3));
+  for (let i = 0; i < slices; i++) {
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, ang + i * Math.PI * 2 / slices, ang + (i + 1) * Math.PI * 2 / slices); ctx.closePath();
+    ctx.fillStyle = i === 0 ? "#c62828" : (i % 2 ? "#333" : "#444"); ctx.fill(); ctx.strokeStyle = "#111"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang + (i + 0.5) * Math.PI * 2 / slices); ctx.fillStyle = "#fff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "right";
+    ctx.fillText(i === 0 ? "😈 STEAL" : "nope", r - 10, 5); ctx.restore();
+  }
+  ctx.fillStyle = "#ffeb3b"; ctx.beginPath(); ctx.moveTo(cx - 14, cy - r - 22); ctx.lineTo(cx + 14, cy - r - 22); ctx.lineTo(cx, cy - r + 4); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 22px system-ui"; ctx.textAlign = "center";
+  ctx.fillText(`🎡 DEVIL'S DEAL: ${nm(b.by)} paid ${nm(b.target)} 500 points`, cx, 80);
+  if (k >= 1 || now() > b.t0 + b.dur - 300) ctx.fillText(b.win ? `😈 STOLEN: ${RULES[b.prize] ? RULES[b.prize].icon + " " + RULES[b.prize].name : ""}!` : "No luck this time", cx, cy + r + 50);
+  else ctx.fillText("10% chance to steal their rarest ability forever…", cx, cy + r + 50);
 }

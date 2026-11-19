@@ -104,3 +104,57 @@
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2e7dff; color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 600; transition: transform .25s, opacity .25s; z-index: 30; max-width: 90vw; opacity: 0; pointer-events: none; }
   #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   #toast.bad { background: #c62828; }
+
+/* ---- daily limit screen ---- */
+#limitScreen { position: fixed; inset: 0; background: rgba(10,12,18,.92); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+#limitScreen[hidden] { display: none; }
+.limitCard { max-width: 480px; text-align: center; display: flex; flex-direction: column; gap: 10px; line-height: 1.45; }
+.limitCard p { margin: 0; }
+.limitIcon { font-size: 56px; }
+.limitBack { font-size: 1.15em; background: #26304a; border-radius: 10px; padding: 10px; }
+
+/* ---- limited-time events ---- */
+.eventBanner { background: linear-gradient(90deg, #3a2a6b, #1e2129); border-radius: 10px; padding: 10px 14px; }
+.eventCard { text-align: center; }
+.eventCard h2 { margin: 4px 0 8px; }
+.eventIcon { font-size: 54px; }
+.jackpotNote { margin-top: 10px; padding: 10px; border-radius: 10px; background: linear-gradient(90deg, #ff000033, #ffa50033, #ffff0033, #00ff0033, #0000ff33, #ee82ee33); }
+.limitedPack { margin-top: 12px; border: 2px solid #ff4dff55; }
+.limitedPack ul { list-style: none; padding-left: 0; }
+.limitedPack li { margin: 6px 0; }
+.limitedPack canvas.skinprev { width: 28px; height: 28px; vertical-align: middle; }
+#fxOverlay { display: none; position: fixed; inset: 0; z-index: 90; pointer-events: none; align-items: center; justify-content: center; }
+#fxOverlay .scare { font-size: 46vh; animation: scareShake .08s infinite; filter: drop-shadow(0 0 40px red); }
+@keyframes scareShake { 0% { transform: translate(-8px, 4px) scale(1.05); } 50% { transform: translate(8px, -4px) scale(.98); } 100% { transform: translate(-4px, -6px) scale(1.08); } }
+#rollModal.rare-mythical .box { box-shadow: 0 0 60px #ff4dff; animation: mythGlow 1s infinite alternate; }
+#rollModal.rare-legendary .box { box-shadow: 0 0 50px #ffb300; }
+@keyframes mythGlow { from { box-shadow: 0 0 30px #ff4dff; } to { box-shadow: 0 0 80px #7c4dff; } }
+/* Golden Games: everything turns gold */
+body.ev-golden { background: radial-gradient(circle at 50% 0, #4d3b06, #1a1402 70%); color: #fff6d5; }
+body.ev-golden .card, body.ev-golden .panel, body.ev-golden #log, body.ev-golden .pack, body.ev-golden .tabs button { background: #2b2108; }
+body.ev-golden button, body.ev-golden .tabs button.active { background: linear-gradient(180deg, #ffd54f, #c79100); color: #2b1d00; }
+body.ev-golden button:disabled { background: #5a4a1a; color: #9b8a5a; }
+body.ev-golden canvas#c { background: #2b2108; box-shadow: 0 0 40px #ffb30055; }
+body.ev-golden h1 { color: #ffd54f; text-shadow: 0 0 18px #ffb300; }
+body.ev-golden .eventBanner { background: linear-gradient(90deg, #8a6d12, #2b2108); }
+body.ev-golden .tabs button { background: #2b2108; color: #ffe9a8; }
+body.ev-golden .tabs button.active { background: linear-gradient(180deg, #ffd54f, #c79100); color: #2b1d00; }
+
+/* ---- friends ---- */
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #555; margin-right: 8px; }
+.dot.on { background: #4caf50; }
+.dot.ingame { background: #2e7dff; box-shadow: 0 0 8px #2e7dff; }
+/* ---- board ---- */
+.boardHead { display: flex; flex-direction: column; gap: 10px; }
+.boardProgress { position: relative; height: 26px; background: #12141a; border-radius: 13px; overflow: hidden; }
+.boardProgress #boardBar { height: 100%; background: linear-gradient(90deg, #2e7dff, #ff4dff); width: 0; transition: width .4s; }
+.boardProgress span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.boardGrid { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; }
+.boardGrid .slot { aspect-ratio: 1; border-radius: 6px; background: #1e2129; border: 1px dashed #333846; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aab; overflow: hidden; }
+.boardGrid .slot.taken { background: #2a2e3a; border-style: solid; }
+.boardGrid .slot.mine { background: #2e7dff; border: 2px solid #9ec2ff; color: #fff; font-weight: 700; }
+#noticeModal { display: none; position: fixed; inset: 0; background: #000c; z-index: 25; align-items: center; justify-content: center; }
+#noticeModal .box { background: #1e2129; border-radius: 14px; padding: 24px; width: 520px; max-width: 94vw; display: flex; flex-direction: column; gap: 12px; }
+.notice { background: #262a35; border-radius: 10px; padding: 10px 12px; text-align: left; line-height: 1.45; }
+.notice.big { background: linear-gradient(90deg, #5b1f8f, #2e7dff); font-weight: 600; }
+.tutNew { background: linear-gradient(90deg, #5b1f8f, #2e7dff); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-weight: 600; }

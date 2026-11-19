@@ -143,6 +143,75 @@ const TUT_SLIDES = [
     },
   },
   {
+    title: "⏳ Limited-time events",
+    text: "Sometimes an <b>event</b> switches on for a while. A banner shows at the top and a <b>⏳ Limited</b> tab appears. <b>🏆 Golden Games</b> turns everything gold with <b>2x points</b>. <b>🍀 Lucky</b> makes rare items more likely. <b>🎯 Bounty Hunt</b> puts a 💰 on someone. <b>🌑 Blackout</b> turns the lights off. <b>Trading is free</b> during any event!",
+    draw(c, t) {
+      const ev = [["🏆", "Golden Games", "#ffd54f"], ["🍀", "Lucky", "#81c784"], ["🎯", "Bounty Hunt", "#ff8a65"], ["🌑", "Blackout", "#9fa8da"]][Math.floor(t / 1300) % 4];
+      if (ev[1] === "Golden Games") { const g = c.createRadialGradient(240, 130, 20, 240, 130, 260); g.addColorStop(0, "#5a4608"); g.addColorStop(1, "#1f1803"); c.fillStyle = g; c.fillRect(0, 0, 480, 260); }
+      if (ev[1] === "Blackout") { c.fillStyle = "#000"; c.fillRect(0, 0, 480, 260); }
+      c.fillStyle = "#3a2a6b"; c.fillRect(40, 20, 400, 34); tText(c, `${ev[0]} ${ev[1]} is on!  Ends in 59m`, 240, 43, "#fff", 15);
+      tText(c, ev[0], 240, 150, ev[2], 64);
+      tText(c, ev[1], 240, 205, ev[2], 20);
+      if (ev[1] === "Bounty Hunt") tText(c, "💰", 300, 110, "#fff", 30);
+    },
+  },
+  {
+    title: "😈 Limited packs",
+    text: "Some events bring a special pack to the shop: <b>🎩 Illusioner</b>, <b>🪓 Barbaric</b>, <b>😇 Angel</b>, <b>😈 Devil</b> (new abilities) or the <b>💎 Legendary Skin Pack</b>. They leave when the event ends, but <b>what you get is yours forever</b>. Look out for the new <b style='color:#ff4dff'>Mythical</b> rarity!",
+    draw(c, t) {
+      const packs = [["🎩", "Illusioner"], ["🪓", "Barbaric"], ["😇", "Angel"], ["😈", "Devil"], ["💎", "Legendary"]];
+      packs.forEach(([ic, nm2], i) => {
+        const x = 56 + i * 92, y = 95 + Math.sin(t / 300 + i) * 6;
+        c.fillStyle = "#262a35"; c.fillRect(x - 38, y - 40, 76, 92); c.strokeStyle = i === Math.floor(t / 700) % 5 ? "#ff4dff" : "#3a3f4e"; c.lineWidth = 3; c.strokeRect(x - 38, y - 40, 76, 92);
+        tText(c, ic, x, y + 8, "#fff", 34); tText(c, nm2, x, y + 40, "#cfd3e0", 12);
+      });
+      const g = 0.5 + 0.5 * Math.sin(t / 200);
+      tText(c, "✨ MYTHICAL ✨", 240, 225, `rgba(255,77,255,${0.5 + g * 0.5})`, 22);
+    },
+  },
+  {
+    title: "🌀 Wild new abilities",
+    text: "The limited packs have tricks you've never seen. <b>👥 Clone</b> makes a copy of you, and if they throw to the copy, <b>they're</b> out. <b>🐂 Bull Rush</b> steals the ball. <b>⚡ Flash</b> blinds everyone. <b>🎡 Devil's Deal</b> pauses the game and spins a wheel to steal someone's best ability forever. Some cost points, so you click a player to use them.",
+    draw(c, t) {
+      const k = Math.floor(t / 2400) % 2, f = (t % 2400) / 2400;
+      if (k === 0) {
+        tCube(c, 100, 130, "#4fc3f7", "Ana", 40);
+        tCube(c, 340, 80, "#ffb74d", "Ben", 40); tCube(c, 380, 190, "#ffb74d", "Ben", 40);
+        tLine(c, [100, 130], f < 0.5 ? [340, 80] : [380, 190], "#2ecc40");
+        tText(c, "Which one is real? 👥", 240, 245, "#ffd54f", 16);
+      } else {
+        const ang = (1 - Math.pow(1 - f, 3)) * Math.PI * 8;
+        for (let i = 0; i < 10; i++) { c.beginPath(); c.moveTo(240, 125); c.arc(240, 125, 80, ang + i * Math.PI / 5, ang + (i + 1) * Math.PI / 5); c.closePath(); c.fillStyle = i === 0 ? "#c62828" : i % 2 ? "#333" : "#444"; c.fill(); }
+        c.fillStyle = "#ffeb3b"; c.beginPath(); c.moveTo(228, 30); c.lineTo(252, 30); c.lineTo(240, 50); c.fill();
+        tText(c, "🎡 Devil's Deal: 10% to steal!", 240, 238, "#fff", 16);
+      }
+    },
+  },
+  {
+    title: "👥 Friends",
+    text: "Add friends in the <b>👥 Friends</b> tab. You can see who's online and press <b>Join</b> to go into their game, even matchmade ones. To keep points fair, if <b>everyone</b> in a matchmade game came in through a friend, it waits for someone else, or <b>bots join after 25 seconds</b>.",
+    draw(c, t) {
+      const f = (t % 4000) / 4000;
+      tCube(c, 150, 120, "#4fc3f7", "You", 40); tCube(c, 330, 120, "#ffb74d", "Friend", 40);
+      c.strokeStyle = "#2e7dff"; c.lineWidth = 3; c.beginPath(); c.moveTo(175, 120); c.lineTo(305, 120); c.stroke(); tText(c, "👥", 240, 112, "#fff", 22);
+      if (f > 0.55) [[90, 210], [190, 220], [290, 220], [390, 210]].forEach((p, i) => { if (f > 0.55 + i * 0.08) tCube(c, p[0], p[1], ["#e57373", "#90a4ae", "#aed581", "#7986cb"][i], "🤖", 28); });
+      else tText(c, `Waiting for someone else… ${Math.ceil((0.55 - f) * 45)}s`, 240, 215, "#8a90a2", 14);
+    },
+  },
+  {
+    title: "🎟️ The Board",
+    text: "In the <b>🎟️ Board</b> tab, buy slots for <b>⭐ 100</b> each, as many as you like. When all 100 are full, <b>1 random slot wins a limited pack</b> and every other slot gets a <b>free ability pack</b>. More slots = better chance!",
+    draw(c, t) {
+      const filled = Math.floor(((t % 4000) / 3200) * 100);
+      for (let i = 0; i < 100; i++) {
+        const x = 40 + (i % 20) * 20, y = 30 + Math.floor(i / 20) * 20;
+        c.fillStyle = i < filled ? (i % 7 === 0 ? "#2e7dff" : "#3a3f4e") : "#1e2129"; c.fillRect(x, y, 17, 17);
+      }
+      if (filled >= 100) { const w = 37; c.strokeStyle = "#ffd54f"; c.lineWidth = 3; c.strokeRect(40 + (w % 20) * 20 - 2, 30 + Math.floor(w / 20) * 20 - 2, 21, 21); tText(c, "🏆 Slot 38 wins a limited pack!", 240, 160, "#ffd54f", 17); tText(c, "Everyone else: a free pack each", 240, 190, "#cfd3e0", 14); }
+      else tText(c, `${filled} / 100`, 240, 170, "#cfd3e0", 18);
+    },
+  },
+  {
     title: "🚀 You're ready!",
     text: "Quick recap: <kbd>Space</kbd> = charge/throw and catch · <kbd>B</kbd> = clap · <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> = abilities · fake people out! You can watch this again any time with the 📖 button at the top.",
     draw(c, t) {
@@ -154,8 +223,9 @@ const TUT_SLIDES = [
 ];
 
 let tutIdx = 0, tutShownAt = 0, tutFirstTime = false, tutOpen = false, tutTimer = null;
-function openTutorial(firstTime) {
-  tutFirstTime = !!firstTime; tutIdx = 0; tutOpen = true;
+let tutWhatsNew = false;
+function openTutorial(firstTime, seenBefore) {
+  tutFirstTime = !!firstTime; tutIdx = 0; tutOpen = true; tutWhatsNew = !!(firstTime && seenBefore);
   el("tutModal").style.display = "flex";
   showTutSlide();
   requestAnimationFrame(tutLoop);
@@ -163,7 +233,7 @@ function openTutorial(firstTime) {
 function showTutSlide() {
   const s = TUT_SLIDES[tutIdx];
   el("tutTitle").textContent = s.title;
-  el("tutText").innerHTML = s.text;
+  el("tutText").innerHTML = (tutWhatsNew && tutIdx === 0 ? `<div class="tutNew">✨ The game got new features! Here's the tutorial again with the new slides.</div>` : "") + s.text;
   el("tutDots").innerHTML = TUT_SLIDES.map((_, i) => `<span class="${i === tutIdx ? "on" : ""}"></span>`).join("");
   el("tutBack").disabled = tutIdx === 0;
   el("tutNext").textContent = tutIdx === TUT_SLIDES.length - 1 ? "Let's play!" : "Next →";

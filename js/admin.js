@@ -19,6 +19,12 @@ async function adminDo(op, args, msg) {
 }
 el("adminLuckyBtn").onclick = () => { const u = el("adminLuckyUser").value.trim(); adminDo("adminLucky", { username: u, on: true }, `🍀 ${u}'s next pack will be the rarest item`); el("adminLuckyUser").value = ""; };
 el("adminBanBtn").onclick = () => { const u = el("adminBanUser").value.trim(); adminDo("adminBan", { username: u, on: true }, `⛔ ${u} is banned for 30 minutes`); el("adminBanUser").value = ""; };
+el("adminEventId").innerHTML = Object.entries(EVENTS).map(([id, e]) => `<option value="${id}">${e.icon} ${e.name}</option>`).join("");
+el("adminEventBtn").onclick = () => {
+  const id = el("adminEventId").value, mins = Math.floor((+el("adminEventMins").value || 0) * (+el("adminEventUnit").value || 1));
+  adminDo("adminConfig", { event: id, minutes: mins }, `${EVENTS[id].icon} ${EVENTS[id].name} is on for ${timeLeft(mins * 60000)}`).then(() => api("me").then(setProfile));
+};
+el("adminEventStop").onclick = () => adminDo("adminConfig", { stopEvent: true }, "Event stopped").then(() => api("me").then(setProfile));
 el("adminTeamBtn").onclick = () => adminDo("adminConfig", { antiTeaming: !adminCfg.antiTeaming }, `Anti-teaming is now ${adminCfg.antiTeaming ? "OFF" : "ON"}`);
 
 async function refreshAdmin() {
@@ -27,6 +33,8 @@ async function refreshAdmin() {
     const d = await api("adminLists");
     adminCfg = d.config;
     el("adminTeamBtn").textContent = adminCfg.antiTeaming ? "ON" : "OFF";
+    const ev = adminCfg.event && adminCfg.event.until > Date.now() ? adminCfg.event : null;
+    el("adminEventNow").innerHTML = ev ? `Now: <b>${EVENTS[ev.id].icon} ${EVENTS[ev.id].name}</b>, ${timeLeft(ev.until - Date.now())} left` : "No event on right now.";
     el("adminTeamBtn").style.background = adminCfg.antiTeaming ? "#1f6f3a" : "#555";
     el("adminBanList").innerHTML = d.banned.length ? d.banned.map(b =>
       `<div class="adminRow"><span><b>${esc(b.username)}</b> · ${Math.ceil((b.until - Date.now()) / 60000)} min left</span><button type="button" data-unban="${esc(b.username)}">Unban</button></div>`).join("")

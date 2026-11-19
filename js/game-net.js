@@ -8,7 +8,10 @@ const ABILITY_KEYS = ["j", "k", "l", "u", "i", "o"];
 const COLORS = ["#4fc3f7", "#ffb74d", "#ba68c8", "#4db6ac", "#f06292", "#aed581", "#ffd54f", "#7986cb", "#e57373", "#90a4ae"];
 
 // ---------------------------------------------------------------- what the server last told us
-let S = null, players = {}, ball = null, rules = {}, doubles = {};
+let S = null, players = {}, ball = null, rules = {}, doubles = {}, fx = {}, EVENT_ID = null, TURN = 0;
+// abilities where you click a player after pressing the key
+const TARGET_ABILITIES = { counterForce: "who they must throw to", neutralise: "who to Neutralise (costs you 5 points)",
+  heavenlyWrath: "who gets Heavenly Wrath (you give them 5 points)", devilsDeal: "who to make a Devil's Deal with (you pay them 500 points)" };
 let me = { id: null, name: "" };
 let MODE = "casual", IS_PUBLIC = false, IS_RISK = false, ROOM_KEY = "", inGame = false;
 let CHARGE_TIME = 1400, FLIGHT_TIME = 750, CATCH_FROM = 0.6, DF_GRACE_MS = 3000, HOT_POTATO_MS = 3000, BOT_WAIT_MS = 25000, DUEL_SPEEDUP = 0.88, MIN_FLIGHT = 300;
@@ -42,24 +45,30 @@ function joinGame(key) {
       else if (m.t === "state") applyState(m.state);
       else if (m.t === "ping") send({ t: "pong", s: m.s });
       else if (m.t === "err") say(m.m);
-      else if (m.t === "error") { if (!settled) { settled = true; reject(new Error(m.m)); } }
+      else if (m.t === "error") { if (!settled) { settled = true; if (/daily limit/i.test(m.m)) checkLimit(); reject(new Error(m.m)); } }
       else if (m.t === "kicked") { toast(m.m, true); setTimeout(() => location.reload(), 2500); joinedOK = false; }
       else if (m.t === "points" && typeof onPoints === "function") onPoints(m.points);
     };
     sock.onclose = () => {
-      if (!settled) { settled = true; reject(new Error("Couldn't connect to the game server")); return; }
-      if (joinedOK) { joinedOK = false; toast("Disconnected from the game", true); setTimeout(() => location.reload(), 2500); }
+      if (!settled) { settled = true; checkLimit().then(lim => reject(new Error(lim ? "The game is resting until its daily limit resets" : "Couldn't connect to the game server"))); return; }
+      if (joinedOK) {
+        joinedOK = false;
+        checkLimit().then(lim => { if (!lim) { toast("Disconnected from the game", true); setTimeout(() => location.reload(), 2500); } });
+      }
     };
     sock.onerror = () => {};
   });
 }
 function applyState(st) {
   S = st; players = st.players || {}; ball = st.ball; rules = st.rules || {}; doubles = st.doubles || {};
+  fx = st.fx || {}; EVENT_ID = st.event || null; TURN = st.turn || 0;
+  if (fx.clone && fx.clone.look) players = Object.assign({}, players, { [fx.clone.id]: fx.clone.look });   // the clone looks exactly like a player
+  effectSounds();
   MODE = st.mode; IS_PUBLIC = st.isPublic; IS_RISK = st.isRisk;
   if (st.tune) ({ CHARGE_TIME, FLIGHT_TIME, CATCH_FROM, DF_GRACE_MS, HOT_POTATO_MS, BOT_WAIT_MS, DUEL_SPEEDUP, MIN_FLIGHT } = st.tune);
   offsets.push(st.now - Date.now()); if (offsets.length > 30) offsets.shift();
   if (!iHaveBall()) { charging = false; myCharge = 0; }
-  if (!ball || ball.state !== "held") pickMode = null;
+  if (pickMode && canUse(pickMode)) pickMode = null;
 }
 function startGameScreen(key) {
   ROOM_KEY = key; inGame = true;
@@ -81,7 +90,7 @@ function hasRule(id) { return !!rules[id]; }
 function humanCount() { return Object.keys(players).filter(id => !players[id].bot).length; }
 function hostId() { return S && S.host; }
 function isHost() { return S && S.host === me.id; }
-function roundRunning() { return ball && ["held", "flying", "nuke"].includes(ball.state); }
+function roundRunning() { return ball && ["held", "flying", "nuke", "rush", "wheel"].includes(ball.state); }
 function iHaveBall() { return ball && ball.state === "held" && ball.holder === me.id && isAlive(me.id); }
 function ballComingToMe() { return ball && ball.state === "flying" && ball.to === me.id; }
 function progress(b) { return (now() - b.t0) / b.dur; }
@@ -101,7 +110,17 @@ function forcedSet(h) {
   if (ball.counter && players[ball.counter.to] && ball.counter.to !== h) set.add(ball.counter.to);
   return [...set];
 }
+function myCatchFrom() { return (S && S.catchFrom && S.catchFrom[me.id]) || CATCH_FROM; }
+function gripOf(id) { const g = players[id] && players[id].grip; return g && TURN <= g.untilTurn ? g : null; }
+function fxOn(k) { const f = fx[k]; return !!f && (f.untilTurn == null || TURN <= f.untilTurn) && (f.until == null || now() < f.until); }
+function pickValid(id, target) {
+  if (!players[target] || target === me.id) return false;
+  if (id === "counterForce") return isAlive(target) && !(ball && ball.holder === target);
+  if (id === "devilsDeal") return !players[target].bot && !(fx.clone && fx.clone.id === target);
+  return isAlive(target);
+}
 function allowedTargets(h) {
+  if (S && S.allowed && ball && ball.state === "held" && ball.holder === h) return S.allowed.slice();
   let opts = aliveIds().filter(id => id !== h);
   const req = forcedSet(h).filter(isAlive);
   if (req.length) return req;
@@ -125,10 +144,11 @@ function canvasPoint(e) {
 }
 canvas.addEventListener("mousemove", e => { const p = canvasPoint(e); mouse.x = p.x; mouse.y = p.y; mouse.moved = true; });
 canvas.addEventListener("click", e => {
-  if (pickMode !== "counter") return;
+  if (!pickMode) return;
   const p = canvasPoint(e);
   const hit = Object.keys(lastPos).find(id => Math.abs(p.x - lastPos[id].x) < 37 && Math.abs(p.y - lastPos[id].y) < 37);
-  if (hit) { send({ t: "ability", id: "counterForce", target: hit }); pickMode = null; }
+  if (hit && pickValid(pickMode, hit)) { send({ t: "ability", id: pickMode, target: hit }); pickMode = null; }
+  else if (hit) say("You can't pick them for that");
 });
 window.addEventListener("keydown", e => {
   if (!inGame) return;
@@ -156,7 +176,7 @@ window.addEventListener("keydown", e => {
     if (!id) return;
     const why = canUse(id);
     if (why) { say(`${RULES[id].name}: ${why}`); return; }
-    if (id === "counterForce") { pickMode = "counter"; say("Click who they must throw to (Esc to cancel)"); return; }
+    if (TARGET_ABILITIES[id]) { pickMode = id; say(`Click ${TARGET_ABILITIES[id]} (Esc to cancel)`); return; }
     send({ t: "ability", id });
   } else if (iHaveBall() && ["a", "arrowleft", "d", "arrowright", "q", "e"].includes(k)) cycleTarget(["a", "arrowleft", "q"].includes(k) ? -1 : 1);
 });
@@ -190,6 +210,48 @@ $("removeBotsBtn").onclick = () => send({ t: "removeBots" });
 $("voteBotsBtn").onclick = () => send({ t: "vote" });
 $("skipRule").onclick = () => send({ t: "rule", action: "skip" });
 function chooseRule(action, id) { send({ t: "rule", action, id }); }
+
+// ---------------------------------------------------------------- effects other players cause (sounds + overlays)
+let seenFx = {};
+function effectSounds() {
+  const f = fx.flash;
+  if (f && seenFx.flash !== f.at) { seenFx.flash = f.at; if (f.by !== me.id) playTone(1800, 0.12, "square", 0.25); }
+  const sc = fx.scare;
+  if (sc && seenFx.scare !== sc.at) { seenFx.scare = sc.at; if (sc.victim === me.id) { playScream(); jumpScareUntil = performance.now() + 1100; } }
+  const q = fx.quake;
+  if (q && seenFx.quake !== q.at) { seenFx.quake = q.at; if (q.by !== me.id) playTone(55, 0.8, "sawtooth", 0.35); }
+  if (ball && ball.state === "wheel" && seenFx.wheel !== ball.t0) { seenFx.wheel = ball.t0; playTone(660, 0.1, "triangle", 0.2); }
+  if (ball && ball.mid && seenFx.scream !== ball.t0) { seenFx.scream = ball.t0; playTone(1200, 0.5, "sine", 0.2); }
+}
+let jumpScareUntil = 0;
+function overlays() {      // full-screen Flash and Jump Scare
+  const ov = $("fxOverlay"); if (!ov) return;
+  const f = fx.flash, t = now();
+  let white = 0;
+  if (f && f.by !== me.id) { if (t >= f.at && t < f.at + 1000) white = 1; else if (t >= f.at + 1000) white = Math.max(0, 1 - (t - f.at - 1000) / 600); }
+  const scary = performance.now() < jumpScareUntil;
+  ov.style.display = white > 0 || scary ? "flex" : "none";
+  ov.style.background = scary ? "#000" : `rgba(255,255,255,${white})`;
+  ov.innerHTML = scary ? `<div class="scare">👹</div>` : "";
+}
+function playTone(freq, secs, type, vol) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "sine"; o.frequency.value = freq; g.gain.value = vol || 0.2;
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + secs);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + secs);
+  } catch (e) {}
+}
+function playScream() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(900, actx.currentTime); o.frequency.exponentialRampToValueAtTime(200, actx.currentTime + 0.7);
+    g.gain.value = 0.4; g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.8);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + 0.8);
+  } catch (e) {}
+}
 
 // ---------------------------------------------------------------- sound
 let actx;
@@ -255,6 +317,7 @@ function loop() {
   else $("startBtn").style.display = IS_PUBLIC ? "none" : "";
   $("log").innerHTML = ((S && S.log) || []).slice(-6).reverse().map(l => `<div>${escHtml(l.m)}</div>`).join("");
   draw(pos, t);
+  overlays();
   renderHud();
   renderRulePanel();
   requestAnimationFrame(loop);

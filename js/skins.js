@@ -75,7 +75,40 @@ const SKINS = {
                    for (let i = 0; i < 6; i++) { const r = Math.sin(f * 12.9898 + i * 78.233) * 43758.5453; const off = ((r - Math.floor(r)) - .5) * s * .4;
                      c.fillStyle = ["#00e5ff", "#ff00e5", "#ffffff"][i % 3]; c.globalAlpha = .8; c.fillRect(x + off, y + i * s / 6, s, s / 12); }
                    c.globalAlpha = 1; }) },
+
+  // Legendary Skin Pack
+  brown:       { name: "Brown", draw: (c, x, y, s) => _fill(c, x, y, s, "#7a4a24") },
+  mage:        { name: "Illusioner Mage", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+                   c.fillStyle = _grad(c, x, y, s, ["#2a0b4a", "#5b1f8f", "#2a0b4a"]); c.fillRect(x, y, s, s);
+                   c.fillStyle = "#3a1166"; c.beginPath(); c.moveTo(x + s * .5, y - s * .05); c.lineTo(x + s * .82, y + s * .42); c.lineTo(x + s * .18, y + s * .42); c.fill();   // hat
+                   c.fillStyle = "#ffd54f"; c.fillRect(x + s * .18, y + s * .38, s * .64, s * .06);
+                   for (let i = 0; i < 6; i++) { const a = t / 600 + i, r = s * .32;
+                     c.globalAlpha = .5 + .5 * Math.sin(t / 200 + i); _dot(c, x + s * .5 + Math.cos(a) * r, y + s * .68 + Math.sin(a) * r * .4, 2, "#e1bee7"); }
+                   c.globalAlpha = 1; }) },
+  barbarian:   { name: "Barbarian", draw: (c, x, y, s) => _clip(c, x, y, s, () => {
+                   _fill(c, x, y, s, "#8d6e63");
+                   c.fillStyle = "#5d4037"; for (let i = 0; i < 7; i++) c.fillRect(x + i * s / 7, y + s * .62 + (i % 2) * 3, s / 7 - 1, s * .4);   // fur
+                   c.fillStyle = "#9e9e9e"; c.fillRect(x, y, s, s * .3);                                                                     // helmet
+                   c.fillStyle = "#eeeeee"; c.beginPath(); c.moveTo(x + s * .02, y + s * .28); c.lineTo(x - s * .02, y - s * .02); c.lineTo(x + s * .2, y + s * .2); c.fill();
+                   c.beginPath(); c.moveTo(x + s * .98, y + s * .28); c.lineTo(x + s * 1.02, y - s * .02); c.lineTo(x + s * .8, y + s * .2); c.fill();
+                   c.fillStyle = "#3e2723"; c.fillRect(x + s * .28, y + s * .42, s * .1, s * .06); c.fillRect(x + s * .62, y + s * .42, s * .1, s * .06); }) },
+  angel:       { name: "Angel", draw: (c, x, y, s, b, t) => {
+                   c.save(); c.fillStyle = "rgba(255,255,255,.85)";                               // wings (drawn outside the cube)
+                   const f = Math.sin(t / 250) * s * .06;
+                   [[-1, x], [1, x + s]].forEach(([d, ex]) => { c.beginPath(); c.moveTo(ex, y + s * .35); c.quadraticCurveTo(ex + d * s * .45, y + s * .05 - f, ex + d * s * .38, y + s * .55); c.quadraticCurveTo(ex + d * s * .2, y + s * .6, ex, y + s * .6); c.fill(); });
+                   c.restore();
+                   c.fillStyle = _grad(c, x, y, s, ["#ffffff", "#fff8e1", "#ffe082"]); c.fillRect(x, y, s, s);
+                   c.strokeStyle = "#ffd54f"; c.lineWidth = 3; c.beginPath(); c.ellipse(x + s / 2, y - s * .12, s * .3, s * .08, 0, 0, Math.PI * 2); c.stroke(); } },
+  devil:       { name: "Devil", draw: (c, x, y, s, b, t) => {
+                   c.fillStyle = "#b71c1c";                                                       // horns (outside the cube)
+                   c.beginPath(); c.moveTo(x + s * .12, y); c.lineTo(x + s * .02, y - s * .28); c.lineTo(x + s * .32, y); c.fill();
+                   c.beginPath(); c.moveTo(x + s * .88, y); c.lineTo(x + s * .98, y - s * .28); c.lineTo(x + s * .68, y); c.fill();
+                   c.fillStyle = _grad(c, x, y, s, ["#7f0000", "#d32f2f", "#7f0000"]); c.fillRect(x, y, s, s);
+                   const g = .6 + .4 * Math.sin(t / 180);
+                   _dot(c, x + s * .32, y + s * .42, s * .07, `rgba(255,235,59,${g})`); _dot(c, x + s * .68, y + s * .42, s * .07, `rgba(255,235,59,${g})`);
+                   c.strokeStyle = "#ffeb3b"; c.lineWidth = 2; c.beginPath(); c.arc(x + s * .5, y + s * .6, s * .18, 0.2, Math.PI - 0.2); c.stroke(); } },
 };
+Object.entries(EXTRA_SKINS).forEach(([sid, r]) => { SKINS[sid].rarity = r; SKINS[sid].pack = "legendary"; });
 // fill in rarity/pack from SKIN_PACKS
 Object.entries(SKIN_PACKS).forEach(([pid, p]) => p.skins.forEach((sid, i) => { SKINS[sid].pack = pid; SKINS[sid].rarity = SKIN_ODDS[i][0]; }));
 

@@ -43,9 +43,16 @@
     <button data-tab="play" class="active">▶ Play</button>
     <button data-tab="shop">🛒 Shop</button>
     <button data-tab="inv">🎒 Inventory</button>
+    <button data-tab="limited" id="limitedTabBtn" hidden>⏳ Limited</button>
     <button data-tab="risk">🎲 High Risk</button>
     <button data-tab="trade">🤝 Trade <span id="tradeBadge"></span></button>
+    <button data-tab="friends">👥 Friends <span id="friendBadge"></span></button>
+    <button data-tab="board">🎟️ Board</button>
   </div>
+
+  <div id="eventBanner" class="eventBanner" hidden></div>
+
+  <div id="tab-limited" class="tab" hidden><div id="limitedBox"></div></div>
 
   <div id="tab-play" class="tab">
     <div class="modes">
@@ -95,6 +102,31 @@
       <div class="row"><label class="muted">Stake ⭐</label><input id="riskStake" type="number" min="5" value="20" style="max-width:140px"><button type="button" id="riskCreateBtn">Create High Risk game</button></div>
     </div>
     <div class="card"><h3 style="margin-top:0">Open games</h3><div id="riskGames"></div></div>
+  </div>
+
+  <div id="tab-friends" class="tab" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">Add a friend</h3>
+      <div class="row"><input id="friendUser" placeholder="Their username" maxlength="16"><button type="button" id="friendAddBtn">Send request</button></div>
+      <div class="muted small" style="margin-top:8px">Friends can join each other's games, even matchmade ones. In a matchmade game, if everyone there came in through a friend,
+        the game waits for someone who isn't a friend, or for bots after 25 seconds. That keeps points fair.</div>
+    </div>
+    <div class="card" id="friendInCard" hidden><h3 style="margin-top:0">Friend requests</h3><div id="friendIn"></div></div>
+    <div class="card"><h3 style="margin-top:0">Your friends</h3><div id="friendList"></div></div>
+    <div class="card" id="friendOutCard" hidden><h3 style="margin-top:0">Requests you sent</h3><div id="friendOut"></div></div>
+  </div>
+
+  <div id="tab-board" class="tab" hidden>
+    <div class="card boardHead">
+      <h2 style="margin:0">🎟️ The Board</h2>
+      <div>Buy slots for <b>⭐ 100</b> each, as many as you like. When all <b>100</b> slots are full:
+        <b>1 random slot wins a random limited pack</b> 🏆 and <b>the other 99 each get a random 50-point ability pack</b>. Packs open by themselves.</div>
+      <div class="boardProgress"><div id="boardBar"></div><span id="boardCount">0 / 100</span></div>
+      <div class="row"><label class="muted">Slots</label><input id="boardN" type="number" min="1" value="1" style="max-width:110px">
+        <button type="button" id="boardBuyBtn">Buy</button><span id="boardMine" class="muted"></span></div>
+    </div>
+    <div id="boardGrid" class="boardGrid"></div>
+    <div id="boardLast" class="card small"></div>
   </div>
 
   <div id="tab-trade" class="tab" hidden>
@@ -164,6 +196,18 @@
     <div id="adminLuckyList" class="small"></div>
   </div>
   <div class="card">
+    <h3 style="margin-top:0">⏳ Limited-time events</h3>
+    <div class="muted small">One at a time. It switches itself off when the timer runs out. Trading is free while any event is on.</div>
+    <div id="adminEventNow" class="small" style="margin:6px 0"></div>
+    <div class="row">
+      <select id="adminEventId"></select>
+      <input id="adminEventMins" type="number" min="1" value="60" style="max-width:110px">
+      <select id="adminEventUnit"><option value="1">minutes</option><option value="60" selected>hours</option><option value="1440">days</option></select>
+      <button type="button" id="adminEventBtn">Start event</button>
+      <button type="button" id="adminEventStop" class="secondary">Stop</button>
+    </div>
+  </div>
+  <div class="card">
     <h3 style="margin-top:0">⚙️ Game settings</h3>
     <div class="row" style="justify-content:space-between">
       <div><b>Anti-teaming</b><div class="muted small">Same people in 3 matchmade games in a row → kept apart for the next 3.</div></div>
@@ -177,7 +221,28 @@
   </div>
 </div></div>
 
+<div id="noticeModal"><div class="box center">
+  <h2 style="margin:0">📬 While you were away</h2>
+  <div id="noticeList"></div>
+  <button type="button" id="noticeClose">Got it!</button>
+</div></div>
 <div id="toast"></div>
+<div id="fxOverlay"></div>
+
+<!-- ================= DAILY LIMIT ================= -->
+<div id="limitScreen" hidden>
+  <div class="card limitCard">
+    <div class="limitIcon">😴</div>
+    <h2>Clap Catch is resting</h2>
+    <p>Clap Catch runs on <b>free</b> game servers. Free servers can only handle a certain amount of playing each day,
+       and so many games were played today that the free amount has run out.</p>
+    <p class="limitBack">It comes back by itself at <b id="limitTime">11:00 am</b> (your time).</p>
+    <p><b>Nothing is lost.</b> Your points, packs, skins and trades are all safe.
+       If you were in the middle of a game, that game just won't count.</p>
+    <p class="muted">Nobody needs to do anything, it fixes itself. This page will reload on its own when it's back.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </div>
+</div>
 
 <script src="js/config.js"></script>
 <script src="js/shared.js"></script>
