@@ -46,6 +46,7 @@
     <button data-tab="limited" id="limitedTabBtn" hidden>⏳ Limited</button>
     <button data-tab="risk">🎲 High Risk</button>
     <button data-tab="trade">🤝 Trade <span id="tradeBadge"></span></button>
+    <button data-tab="platinum">💎 Platinum</button>
     <button data-tab="friends">👥 Friends <span id="friendBadge"></span></button>
     <button data-tab="board">🎟️ Board</button>
   </div>
@@ -62,7 +63,30 @@
       </div>
       <div class="mode card" data-mode="competitive">
         <h3>🏆 Competitive</h3>
-        <p>Bring your own 3 equipped abilities. The winner can only add or remove <b>passive</b> rules. Win a round in a <b>matchmade</b> game for <b>+25 points</b>.</p>
+        <p>Bring your own 3 equipped abilities. The winner can only add or remove <b>passive</b> rules. Win a <b>matchmade</b> game for <b>+25 points</b>, 2nd gets 20, 3rd 15, 4th 10, the rest 5.</p>
+      </div>
+      <div class="mode card" data-mode="story">
+        <h3>📖 Story</h3>
+        <p>6 levels with new moves you won't find anywhere else. Beat a level for the first time for <b>+20 points</b>. Beat the boss to unlock new packs.</p>
+      </div>
+      <div class="mode card" data-mode="grind">
+        <h3>🤖 Bot Grind</h3>
+        <p>Just you against 2 bots, as often as you like. Easy +5, Medium +10, Hard +20, Super Hard +40 for each win.</p>
+      </div>
+    </div>
+    <div id="storyBox" class="card" hidden>
+      <h3 style="margin-top:0">📖 Story</h3>
+      <div class="muted small" style="margin-bottom:8px">Someone stole your full power and gave it to the boss. Win it back, one level at a time.</div>
+      <div id="storyLevels" class="storyLevels"></div>
+    </div>
+    <div id="grindBox" class="card" hidden>
+      <h3 style="margin-top:0">🤖 Bot Grind</h3>
+      <div class="muted small" style="margin-bottom:8px">You against 2 bots with your equipped abilities. Win a round for points, then press Start for another.</div>
+      <div class="grindBtns">
+        <button type="button" data-grind="E">2x Easy<br><b>+5</b> a win</button>
+        <button type="button" data-grind="M">2x Medium<br><b>+10</b> a win</button>
+        <button type="button" data-grind="H">2x Hard<br><b>+20</b> a win</button>
+        <button type="button" data-grind="S" class="superBtn">2x Super Hard<br><b>+40</b> a win</button>
       </div>
     </div>
     <div id="loadoutSummary" class="card small"></div>
@@ -71,7 +95,7 @@
       <div id="teamNote" class="small" style="color:#ffd27a;margin-bottom:6px"></div>
       <div class="muted small">Puts you in a room with other players. If nobody else is online after 25 seconds, 4 bots join so you can still play for points. Most bots are medium; hard ones are rare (10%), easy ones 25%.</div>
     </div>
-    <div class="card">
+    <div class="card" id="privateBox">
       <div id="privateWarn" class="warn">⚠️ <b>Private Competitive rooms don't give points.</b> Otherwise people could farm points with alt accounts. Use <b>Find a match</b> to earn points.</div>
       <div class="row">
         <input id="roomCode" placeholder="Room code (e.g. 7B)" maxlength="10">
@@ -102,6 +126,15 @@
       <div class="row"><label class="muted">Stake ⭐</label><input id="riskStake" type="number" min="5" value="20" style="max-width:140px"><button type="button" id="riskCreateBtn">Create High Risk game</button></div>
     </div>
     <div class="card"><h3 style="margin-top:0">Open games</h3><div id="riskGames"></div></div>
+  </div>
+
+  <div id="tab-platinum" class="tab" hidden>
+    <div class="card platHead">
+      <h2 style="margin:0">💎 Platinum</h2>
+      <div>Risk one copy of an ability: <b>10% chance</b> it becomes its <b style="color:#b9f2ff">Platinum</b> version (a better one, yours forever),
+        <b>90% chance it's gone forever</b>. Only one copy is risked at a time, so extras are the safest to try with.</div>
+    </div>
+    <div id="platList" class="platList"></div>
   </div>
 
   <div id="tab-friends" class="tab" hidden>
@@ -161,7 +194,13 @@
     <div class="panel"><h3>Your abilities</h3><div id="abilBox"></div></div>
     <div class="panel"><h3>Room rules</h3><div id="rulesBox"></div></div>
   </div>
-  <div id="log"></div>
+  <div id="logRow">
+    <div id="log"></div>
+    <div id="chatBox">
+      <div id="chatMsgs"></div>
+      <div class="row"><input id="chatIn" maxlength="120" placeholder="Chat (Enter to send)" autocomplete="off"><button type="button" id="chatSend">Send</button></div>
+    </div>
+  </div>
 </div>
 
 <!-- ================= POPUPS ================= -->
@@ -231,6 +270,7 @@
   </div>
 </div></div>
 
+<div id="storyModal"><div class="box center"></div></div>
 <div id="noticeModal"><div class="box center">
   <h2 style="margin:0">📬 While you were away</h2>
   <div id="noticeList"></div>
@@ -267,6 +307,7 @@
 <script src="js/net.js"></script>
 <script src="js/game-net.js"></script>
 <script src="js/game-draw.js"></script>
+<script src="js/story-draw.js"></script>
 <script src="js/app.js"></script>
 <script src="js/tutorial.js"></script>
 <script src="js/admin.js"></script>

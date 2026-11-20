@@ -94,7 +94,7 @@ function renderAll() {
   el("whoami").textContent = "👤 " + PROFILE.username;
   el("pointsLbl").textContent = "⭐ " + PROFILE.points + " points";
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
-  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent();
+  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum();
   el("friendBadge").textContent = PROFILE.friendIn ? `(${PROFILE.friendIn})` : "";
   showNotices();
 }
@@ -112,6 +112,7 @@ let friendData = { friends: [], incoming: [], outgoing: [] };
 async function refreshFriends() { try { friendData = await api("friendsList"); renderFriends(); } catch (e) {} }
 function gameLabel(g) {
   if (!g) return "";
+  if (g.type === "solo") return "playing on their own (Story or Bot Grind)";
   if (g.type === "pub") return `in a matchmade game (${g.humans}/6)`;
   if (g.type === "risk") return g.state === "lobby" ? `in a High Risk lobby, stake ⭐ ${g.stake} (${g.humans}/6)` : "in a High Risk game (started)";
   return `in a private room (${g.humans}/6)`;
@@ -127,7 +128,7 @@ function renderFriends() {
     <button type="button" class="secondary" data-fr-cancel="${esc(f.uid)}">Cancel</button></div>`).join("");
   const order = f => f.game ? 0 : f.online ? 1 : 2;
   el("friendList").innerHTML = d.friends.length ? d.friends.slice().sort((a, b) => order(a) - order(b) || a.username.localeCompare(b.username)).map(f => {
-    const canJoin = f.game && !(f.game.type === "risk" && f.game.state !== "lobby") && f.game.humans < 6;
+    const canJoin = f.game && f.game.type !== "solo" && !(f.game.type === "risk" && f.game.state !== "lobby") && f.game.humans < 6;
     return `<div class="tradeItem"><div><span class="dot ${f.game ? "ingame" : f.online ? "on" : ""}"></span><b>${esc(f.username)}</b>
       <span class="muted small">${f.game ? gameLabel(f.game) : f.online ? "online" : "offline"}</span></div>
       <div class="row">${f.game ? `<button type="button" data-fr-join="${esc(f.uid)}" ${canJoin ? "" : "disabled"}>${canJoin ? "Join" : "Can't join"}</button>` : ""}
@@ -231,14 +232,16 @@ el("joinBtn").onclick = joinFromMenu;
 el("roomCode").addEventListener("keydown", e => { if (e.key === "Enter") joinFromMenu(); });
 function renderPlay() {
   document.querySelectorAll(".mode").forEach(m => m.classList.toggle("active", m.dataset.mode === chosenMode));
-  const comp = chosenMode === "competitive";
+  const comp = chosenMode === "competitive", story = chosenMode === "story", grind = chosenMode === "grind";
   el("matchBox").hidden = !comp; el("privateWarn").hidden = !comp;
+  el("privateBox").hidden = story || grind; el("storyBox").hidden = !story; el("grindBox").hidden = !grind;
+  if (story) renderStory();
   el("joinBtn").textContent = comp ? "Join private room" : "Join room";
   const cd = PROFILE.teamCooldown;
   el("teamNote").textContent = (comp && cd && cd.left > 0)
     ? `You've played 3 matchmade games in a row with the same people, so Find a match will keep you apart for ${cd.left} more game${cd.left > 1 ? "s" : ""}.` : "";
   const lo = PROFILE.loadout || [];
-  el("loadoutSummary").innerHTML = !comp ? "" :
+  el("loadoutSummary").innerHTML = !(comp || grind) ? "" :
     `<b>Your loadout:</b> ${lo.length ? lo.map((id, i) => `<kbd>${keyName(abilityKey(i))}</kbd> ${RULES[id].icon} ${RULES[id].name}`).join(" &nbsp; ") : "<span class='muted'>nothing equipped. Buy packs in the Shop, then equip up to 3 in Inventory.</span>"}`;
 }
 async function enterRoom(getKey) {
@@ -246,6 +249,50 @@ async function enterRoom(getKey) {
   try { const key = await getKey(); await joinGame(key); }
   catch (e) { showScreen("menuScreen"); toast(e.message, true); }
 }
+function renderStory() {
+  const done = PROFILE.storyDone || [];
+  el("storyLevels").innerHTML = STORY_LEVELS.map((L, i) => {
+    const n = i + 1, cleared = done.includes(n), open = n === 1 || done.includes(n - 1);
+    return `<div class="storyLevel ${cleared ? "cleared" : open ? "open" : "locked"}"><div class="storyIcon">${open || cleared ? L.icon : "🔒"}</div>
+      <div><b>${n}. ${L.name}</b><div class="muted small">${cleared ? "✅ Beaten" : open ? "+20 points the first time you beat it" : "Beat the level before to unlock"}</div></div>
+      <button type="button" data-story="${n}" ${open ? "" : "disabled"}>${cleared ? "Play again" : "Play"}</button></div>`;
+  }).join("") + (PROFILE.storyUnlocked ? `<div class="muted small" style="margin-top:8px">👑 You beat the boss! The Titan Pack and 3 new skin packs are in your Shop.</div>` : "");
+  document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => "STORY" + b.dataset.story + Math.random().toString(36).slice(2, 8).toUpperCase()));
+}
+document.querySelectorAll("[data-grind]").forEach(b => b.onclick = () => enterRoom(async () => "GRIND" + b.dataset.grind + Math.random().toString(36).slice(2, 8).toUpperCase()));
+
+// ---------------------------------------------------------------- Platinum tab
+function renderPlatinum() {
+  const ab = PROFILE.abilities || {};
+  const ids = Object.keys(PLATINUM).filter(id => ab[id] > 0);
+  el("platList").innerHTML = ids.length ? ids.map(id => {
+    const R = RULES[id], P2 = RULES["plat_" + id], have = ab["plat_" + id] || 0;
+    return `<div class="platItem"><div class="platTop"><span class="platIcon">${R.icon}</span><div><b>${R.name}</b> ${rarityTag(abilityRarity(id))} <span class="muted small">you have ${ab[id]}</span>
+        ${have ? `<div class="small" style="color:#b9f2ff">💎 You own ${have} Platinum</div>` : ""}</div></div>
+      <div class="small platBonus"><b style="color:#b9f2ff">💎 Platinum:</b> ${PLATINUM[id]}</div>
+      <button type="button" data-plat="${id}">Risk 1 ${R.name}</button></div>`;
+  }).join("") : "<div class='card muted'>You don't have any abilities to risk yet. Get some from the Shop!</div>";
+  document.querySelectorAll("[data-plat]").forEach(b => b.onclick = () => riskPlatinum(b.dataset.plat));
+}
+async function riskPlatinum(id) {
+  const R = RULES[id], last = (PROFILE.abilities[id] || 0) === 1;
+  if (!confirm(`Risk 1 ${R.name}?\n\n10%: it becomes Platinum ${R.name}.\n90%: it's gone forever.${last ? "\n\nThis is your LAST one." : ""}`)) return;
+  if (busy) return; busy = true;
+  el("rollModal").style.display = "flex"; el("rollClose").hidden = true;
+  el("rollTitle").textContent = `Platinum-ising ${R.name}…`;
+  el("rollBox").innerHTML = `<div class="platSpin">${R.icon}</div><div id="rollResult"></div>`;
+  let r;
+  try { r = await api("platinumRisk", { id }); }
+  catch (e) { el("rollModal").style.display = "none"; busy = false; toast(e.message, true); return; }
+  setTimeout(() => {
+    el("rollBox").querySelector(".platSpin").classList.add(r.win ? "win" : "lose");
+    el("rollTitle").innerHTML = r.win ? `<span style="color:#b9f2ff">💎 PLATINUM!</span>` : "It shattered…";
+    el("rollResult").innerHTML = r.win ? `<div class="rollName" style="color:#b9f2ff">Platinum ${esc(R.name)}</div><div class="small">${PLATINUM[id]}</div>` : `<div class="muted">Your ${esc(R.name)} is gone. Better luck next time!</div>`;
+    playTone(r.win ? 1320 : 180, r.win ? 0.6 : 0.5, r.win ? "triangle" : "sawtooth", 0.2);
+    el("rollClose").hidden = false; setProfile(r.me); busy = false;
+  }, 2600);
+}
+
 function joinFromMenu() {
   const code = el("roomCode").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!code || code.length > 10) { toast("Type a room code (letters/numbers, up to 10)", true); return; }
@@ -261,13 +308,13 @@ function renderShop() {
   const pts = PROFILE.points || 0;
   const ev = currentEvent(), lucky = ev && ev.id === "lucky";
   const odds = items => lucky ? luckyOdds(items) : items;
-  el("abilityPacks").innerHTML = (lucky ? `<div class="warn" style="grid-column:1/-1">🍀 <b>Lucky Event:</b> legendary items are 1.5% more likely!</div>` : "") + Object.entries(ABILITY_PACKS).map(([pid, p]) => `
-    <div class="pack"><div class="packHead">${p.icon} <b>${p.name}</b></div><div class="muted small">${p.theme}</div>
+  el("abilityPacks").innerHTML = (lucky ? `<div class="warn" style="grid-column:1/-1">🍀 <b>Lucky Event:</b> legendary items are 1.5% more likely!</div>` : "") + Object.entries(ABILITY_PACKS).filter(([, p]) => !p.story || PROFILE.storyUnlocked).map(([pid, p]) => `
+    <div class="pack ${p.story ? "storyPack" : ""}"><div class="packHead">${p.icon} <b>${p.name}</b> ${p.story ? '<span class="tag">boss reward</span>' : ""}</div><div class="muted small">${p.theme}</div>
       <ul>${odds(p.items).map(([id, pct, r]) => `<li>${RULES[id].icon} ${RULES[id].name} ${rarityTag(r)} <span class="muted">${pct}%</span></li>`).join("")}</ul>
       <button data-buy-ability="${pid}" ${pts < ECON.PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.PACK_COST}</button></div>`).join("");
   const skinOdds = odds(SKIN_ODDS.map(o => [o[0], o[1], o[0]]));
-  el("skinPacks").innerHTML = Object.entries(SKIN_PACKS).map(([pid, p]) => `
-    <div class="pack"><div class="packHead">${p.icon} <b>${p.name}</b></div>
+  el("skinPacks").innerHTML = Object.entries(SKIN_PACKS).filter(([, p]) => !p.story || PROFILE.storyUnlocked).map(([pid, p]) => `
+    <div class="pack ${p.story ? "storyPack" : ""}"><div class="packHead">${p.icon} <b>${p.name}</b> ${p.story ? '<span class="tag">boss reward</span>' : ""}</div>
       <div class="skinRow">${p.skins.map((sid, i) => `<div class="skinCell"><canvas class="skinprev" data-skin="${sid}" width="46" height="46"></canvas>
         <div class="small">${SKINS[sid].name}</div>${rarityTag(skinOdds[i][2])} <span class="muted small">${skinOdds[i][1]}%</span></div>`).join("")}</div>
       <button data-buy-skin="${pid}" ${pts < ECON.SKIN_PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.SKIN_PACK_COST}</button></div>`).join("");

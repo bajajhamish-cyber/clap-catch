@@ -193,3 +193,42 @@ body.ev-golden .tabs button.active { background: linear-gradient(180deg, #ffd54f
 .reelMarker::before { top: 0; border-top-color: #ffd54f; }
 .reelMarker::after { bottom: 0; border-bottom-color: #ffd54f; }
 #rollResult { min-height: 54px; text-align: center; }
+
+/* ---- chat ---- */
+#logRow { display: flex; gap: 10px; width: 960px; max-width: 96vw; }
+#logRow #log { flex: 1; width: auto; }
+#chatBox { flex: 1; background: #1e2129; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+#chatMsgs { height: 110px; overflow-y: auto; font-size: 14px; line-height: 1.35; word-break: break-word; }
+#chatBox input { flex: 1; padding: 6px 8px; }
+#chatBox button { padding: 6px 12px; }
+body.ev-golden #chatBox { background: #2b2108; }
+
+/* ---- story / grind / platinum ---- */
+.storyLevels { display: flex; flex-direction: column; gap: 8px; }
+.storyLevel { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: #262a35; }
+.storyLevel > div:nth-child(2) { flex: 1; }
+.storyLevel.locked { opacity: .5; }
+.storyLevel.cleared { border-left: 4px solid #4caf50; }
+.storyIcon { font-size: 30px; width: 40px; text-align: center; }
+.grindBtns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.grindBtns button { padding: 14px 8px; line-height: 1.5; }
+.grindBtns .superBtn { background: linear-gradient(180deg, #d32f2f, #7f0000); }
+.platHead { display: flex; flex-direction: column; gap: 8px; background: linear-gradient(135deg, #1e2129, #22303a); }
+.platList { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.platItem { background: #1e2129; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.platTop { display: flex; gap: 10px; align-items: center; }
+.platIcon { font-size: 34px; }
+.platBonus { flex: 1; }
+.platSpin { font-size: 90px; animation: platSpin .25s linear infinite; filter: drop-shadow(0 0 20px #b9f2ff); }
+.platSpin.win { animation: none; filter: drop-shadow(0 0 40px #b9f2ff) drop-shadow(0 0 80px #fff); transform: scale(1.2); }
+.platSpin.lose { animation: none; opacity: .25; filter: grayscale(1); }
+@keyframes platSpin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+.rar-platinum { background: linear-gradient(90deg, #b9f2ff, #fff, #b9f2ff); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
+.storyPack { border: 2px solid #ffd54f66; }
+
+#storyModal { display: none; position: fixed; inset: 0; background: #000b; z-index: 30; align-items: center; justify-content: center; }
+#storyModal .box { background: #1e2129; border-radius: 16px; padding: 26px 30px; width: 560px; max-width: 94vw; display: flex; flex-direction: column; gap: 12px; text-align: center; line-height: 1.5; }
+#storyModal h2 { margin: 0; }
+#storyModal p { margin: 0; }
+.storyBig { font-size: 64px; }
+.storyPts { font-size: 22px; font-weight: 800; color: #ffd54f; }

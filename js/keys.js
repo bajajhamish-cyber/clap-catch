@@ -13,6 +13,9 @@ const KEY_ACTIONS = [
   ["ab5", "Stolen ability 2", "i"],
   ["ab6", "Stolen ability 3", "o"],
   ["sac", "Take yourself out (press 3 times)", "g"],
+  ["up", "Move up (Story)", "w"],
+  ["down", "Move down (Story)", "s"],
+  ["dodge", "Make it a dodgeball (Story)", "t"],
 ];
 const KEY_DEFAULTS = Object.fromEntries(KEY_ACTIONS.map(a => [a[0], a[2]]));
 let KEYS = Object.assign({}, KEY_DEFAULTS);

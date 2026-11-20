@@ -20,6 +20,11 @@ const RULES = {
   speedUp:         { name: "Speed Up",         type: "ability", icon: "⏩", desc: "Use when someone else has the ball: their next throw flies 40% faster, so it's harder to clap and catch." },
   decoy:           { name: "Decoy",            type: "ability", icon: "🪞", desc: "While you hold the ball: everyone else sees your aim line pointing at the wrong person until you throw." },
   redo:            { name: "Redo",             type: "ability", icon: "💖", desc: "Once per round, come back in after you get out. Can't be stolen." },
+  // ---- Titan Pack (unlocked by beating the Story boss)
+  heavyBall:     { name: "Heavy Ball",      type: "ability", story: true, icon: "🪨", desc: "When someone else has the ball: it turns to stone, so their bar fills 2x slower this turn." },
+  boomerang:     { name: "Boomerang",       type: "ability", story: true, icon: "🪃", desc: "While you hold the ball: your next throw comes straight back after they catch it, so they never get a turn. Be ready to clap and catch it yourself!" },
+  shockwave:     { name: "Shockwave",       type: "ability", story: true, icon: "💥", desc: "When someone else has the ball: their bar empties and they can't charge for 1.5 seconds." },
+  titanThrow:    { name: "Titan Throw",     type: "ability", story: true, icon: "⚡", desc: "While you hold the ball: your next throw is a fireball that flies 40% faster, and nobody can use abilities until it lands." },
 
   // ---- limited packs (only sold during their event; you keep them forever). Competitive only.
   // Illusioner
@@ -53,8 +58,9 @@ const RARITY = {
   rare:      { label: "Rare",      color: "#4fc3f7" },
   legendary: { label: "Legendary", color: "#ffb300" },
   mythical:  { label: "Mythical",  color: "#ff4dff" },
+  platinum:  { label: "Platinum",  color: "#b9f2ff" },
 };
-const RARITY_RANK = { common: 0, rare: 1, legendary: 2, mythical: 3 };
+const RARITY_RANK = { common: 0, rare: 1, legendary: 2, mythical: 3, platinum: 4 };
 
 const ABILITY_PACKS = {
   guardian:  { name: "Guardian Pack",  icon: "🛡️", theme: "Defence: block and cancel",
@@ -63,7 +69,68 @@ const ABILITY_PACKS = {
                items: [["counterForce", 45, "common"], ["speedUp", 40, "common"], ["doubleForce", 14, "rare"], ["nuke", 1, "legendary"]] },
   trickster: { name: "Trickster Pack", icon: "🃏", theme: "Tricks: swap, come back, burn",
                items: [["swap", 45, "common"], ["decoy", 40, "common"], ["redo", 14, "rare"], ["fireball", 1, "legendary"]] },
+  // unlocked by beating the Story boss
+  titan:     { name: "Titan Pack",     icon: "⚡", theme: "The boss's power, now yours", story: true,
+               items: [["heavyBall", 45, "common"], ["boomerang", 40, "common"], ["shockwave", 14, "rare"], ["titanThrow", 1, "legendary"]] },
 };
+// ---- Platinum: risk an ability in the Platinum tab, 10% chance it becomes its better version
+const PLATINUM = {
+  fireball: "They can't even clap: clapping at it is OUT too. The only way to survive is to let it land.",
+  swap: "Works at any charge, not just under 50%.",
+  doubleForce: "2 uses each round.",
+  antiForce: "2 uses each round.",
+  counterForce: "2 uses each round.",
+  absoluteCounter: "2 uses each round.",
+  ward: "2 uses each round.",
+  nuke: "Everyone has 35% less time to clap.",
+  brace: "Lasts 6 seconds instead of 3.",
+  speedUp: "Their throw is 60% faster instead of 40%.",
+  decoy: "2 uses each round.",
+  redo: "Also works when you join a game that's already running: use it to jump straight in.",
+  mirage: "Lasts 4 turns.",
+  wideGrip: "3x catch zone for 3 turns.",
+  ghostBall: "Invisible almost the whole way (until it's 3% away).",
+  clone: "2 uses each round.",
+  flash: "Their screens stay white for 2 seconds.",
+  quake: "Shakes for 4 seconds.",
+  giant: "2x bigger with a 2x catch zone, for 2 turns.",
+  warCry: "2 uses each round.",
+  bullRush: "Works until their bar is 85% full.",
+  stampede: "Neighbours only for 5 turns.",
+  blindingLight: "Their throw is 4x slower.",
+  angelicScream: "Works until the ball is 80% of the way to you.",
+  fullWipe: "2 uses each round.",
+  neutralise: "Only costs 2 points.",
+  heavenlyWrath: "75% chance they're out.",
+  hellfire: "Turns to fire earlier, at 65% of the way.",
+  jumpScare: "Never scares you.",
+  phantomThrow: "Throws two fakes as well as the real ball.",
+  vengeance: "Works up to 2 turns after you're out.",
+  devilsDeal: "20% chance to steal instead of 10%.",
+};
+const PLAT_TWO_USES = ["doubleForce", "antiForce", "counterForce", "absoluteCounter", "ward", "decoy", "clone", "warCry", "fullWipe"];
+Object.keys(PLATINUM).forEach(id => {
+  const b = RULES[id];
+  RULES["plat_" + id] = { name: "Platinum " + b.name, type: "ability", platinum: true, base: id, limited: b.limited, icon: b.icon, desc: b.desc + " PLATINUM: " + PLATINUM[id] };
+});
+const PLAT_CHANCE = 0.1;
+
+// ---- Story mode
+const STORY_LEVELS = [
+  { name: "Warm Up", icon: "🌱", title: "Level 1: Warm Up",
+    text: "Someone stole your full power and gave it to the boss. First, get back into shape: beat <b>3 easy bots</b> in a normal game. Clap with <b>B</b>, catch with <b>Space</b>." },
+  { name: "Two Lanes", icon: "↕️", title: "Level 2: Two Lanes",
+    text: "New move! You stand on the left, the enemy on the right. Press <b>W</b> to move up and <b>S</b> to move down between the <b>white dots</b>. The enemy throws to one of them: get there, <b>clap</b>, then <b>catch</b>. No fakes here. Catch <b>8 in a row</b>, then throw it back with <b>Space</b>." },
+  { name: "Dodge!", icon: "🔴", title: "Level 3: Dodge!",
+    text: "Watch out for <b>dodgeballs</b>: red with a white outline. <b>Don't catch them, get out of their lane</b> with <b>W</b>/<b>S</b>. Now there are 3 lanes. Survive 6, then catch the normal ball, press <b>T</b> to turn it into a dodgeball and <b>Space</b> to throw it." },
+  { name: "Turn the Tables", icon: "🎯", title: "Level 4: Turn the Tables",
+    text: "Now <b>you</b> have the ball. The enemy moves between 2 lanes to a rhythm. Aim at a lane with <b>A</b>/<b>D</b> and throw a dodgeball with <b>Space</b>. Time it so they're in that lane when it gets there. You have <b>3 balls</b>." },
+  { name: "Crossfire", icon: "⚔️", title: "Level 5: Crossfire",
+    text: "Two enemies, one on each side, both throwing dodgeballs at you. Keep dodging with <b>W</b>/<b>S</b>. Sometimes one throws a <b>normal ball</b>: clap and catch it. Then aim at one of the 4 enemy lanes with <b>A</b>/<b>D</b> and throw with <b>Space</b>. Hit both enemies to win." },
+  { name: "The Boss", icon: "👹", title: "Level 6: The Boss",
+    text: "The boss has your full power. Dodge waves of 1, 2, 3, then 4 dodgeballs across <b>5 lanes</b>. At the end, he throws normal balls in the only safe lane: <b>clap and catch</b> each one and it flies back as a dodgeball. Hit him <b>5 times</b> to win!" },
+];
+
 // limited packs: only in the shop while their event is on
 const LIMITED_PACKS = {
   illusioner: { name: "Illusioner Pack", icon: "🎩", kind: "ability", cost: 150, theme: "Tricks of the eye",
@@ -108,6 +175,7 @@ function luckyOdds(items) {
   return out;
 }
 function abilityRarity(id) {
+  if (id && id.startsWith("plat_")) return "platinum";
   for (const p of [...Object.values(ABILITY_PACKS), ...Object.values(LIMITED_PACKS)]) if (p.kind !== "skin") for (const [a, , r] of p.items) if (a === id) return r;
   return "common";
 }
@@ -120,6 +188,10 @@ const SKIN_PACKS = {
   space:   { name: "Space Pack",   icon: "🌌", skins: ["moon", "galaxy", "blackHole"] },
   candy:   { name: "Candy Pack",   icon: "🍬", skins: ["candyStripe", "cookie", "sprinkles"] },
   tech:    { name: "Tech Pack",    icon: "💾", skins: ["circuit", "checker", "glitch"] },
+  // unlocked by beating the Story boss
+  storm:   { name: "Storm Pack",   icon: "⛈️", skins: ["rain", "lightning", "tornado"], story: true },
+  royal:   { name: "Royal Pack",   icon: "👑", skins: ["velvet", "crown", "dragon"], story: true },
+  stone:   { name: "Stone Pack",   icon: "🗿", skins: ["pebble", "crystal", "titanCore"], story: true },
 };
 const EXTRA_SKINS = { brown: "common", mage: "mythical", barbarian: "mythical", angel: "mythical", devil: "mythical" };   // Legendary Skin Pack only
 const SKIN_IDS = [].concat(...Object.values(SKIN_PACKS).map(p => p.skins), Object.keys(EXTRA_SKINS));
@@ -132,6 +204,6 @@ function skinRarity(id) {
 const ECON = {
   START_POINTS: 0, PACK_COST: 50, SKIN_PACK_COST: 100, TRADE_COST: 5,
   WIN_POINTS: 25, ELIM_POINTS: 5, RISK_MIN_STAKE: 5, BAN_MS: 30 * 60 * 1000,
-  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 2, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", MAX_PLAYERS: 6,
+  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 2, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", MAX_PLAYERS: 6,
 };
 

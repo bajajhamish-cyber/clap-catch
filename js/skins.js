@@ -107,6 +107,41 @@ const SKINS = {
                    const g = .6 + .4 * Math.sin(t / 180);
                    _dot(c, x + s * .32, y + s * .42, s * .07, `rgba(255,235,59,${g})`); _dot(c, x + s * .68, y + s * .42, s * .07, `rgba(255,235,59,${g})`);
                    c.strokeStyle = "#ffeb3b"; c.lineWidth = 2; c.beginPath(); c.arc(x + s * .5, y + s * .6, s * .18, 0.2, Math.PI - 0.2); c.stroke(); } },
+
+  // Story boss rewards
+  rain:      { name: "Rain", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               _fill(c, x, y, s, "#455a64"); c.strokeStyle = "#90caf9"; c.lineWidth = 2;
+               for (let i = 0; i < 7; i++) { const yy = y + ((t / 6 + i * 37) % (s + 12)) - 12, xx = x + (i * 13) % s; c.beginPath(); c.moveTo(xx, yy); c.lineTo(xx - 3, yy + 9); c.stroke(); } }) },
+  lightning: { name: "Lightning", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               _fill(c, x, y, s, "#1a237e"); const on = Math.floor(t / 120) % 9 < 2;
+               c.strokeStyle = on ? "#ffffff" : "#ffeb3b"; c.lineWidth = on ? 4 : 3; c.beginPath();
+               c.moveTo(x + s * .6, y); c.lineTo(x + s * .35, y + s * .5); c.lineTo(x + s * .6, y + s * .5); c.lineTo(x + s * .4, y + s); c.stroke(); }) },
+  tornado:   { name: "Tornado", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               _fill(c, x, y, s, "#78909c"); c.strokeStyle = "rgba(255,255,255,.8)"; c.lineWidth = 2;
+               for (let i = 0; i < 6; i++) { const yy = y + s * (0.1 + i * 0.15), w = s * (0.45 - i * 0.06), off = Math.sin(t / 150 + i) * s * .08;
+                 c.beginPath(); c.ellipse(x + s / 2 + off, yy, w, s * .05, 0, 0, Math.PI * 2); c.stroke(); } }) },
+  velvet:    { name: "Velvet", draw: (c, x, y, s) => { c.fillStyle = _grad(c, x, y, s, ["#4a148c", "#7b1fa2", "#4a148c"]); c.fillRect(x, y, s, s);
+               c.strokeStyle = "#ffd54f"; c.lineWidth = 2; c.strokeRect(x + 4, y + 4, s - 8, s - 8); } },
+  crown:     { name: "Crown", draw: (c, x, y, s, b, t) => {
+               c.fillStyle = _grad(c, x, y, s, ["#b71c1c", "#e53935", "#b71c1c"]); c.fillRect(x, y, s, s);
+               c.fillStyle = "#ffd54f"; c.beginPath(); c.moveTo(x + s * .12, y + s * .1); c.lineTo(x + s * .3, y - s * .22); c.lineTo(x + s * .5, y + s * .02); c.lineTo(x + s * .7, y - s * .22); c.lineTo(x + s * .88, y + s * .1); c.closePath(); c.fill();
+               _dot(c, x + s * .5, y - s * .02, 3, `hsl(${t / 8 % 360},90%,70%)`); } },
+  dragon:    { name: "Dragon Scales", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               _fill(c, x, y, s, "#1b5e20");
+               for (let r = 0; r < 5; r++) for (let k = 0; k < 4; k++) { const cx = x + k * s / 3.5 + (r % 2) * s / 7, cy = y + r * s / 4.5;
+                 c.fillStyle = `hsl(${120 + Math.sin(t / 300 + r + k) * 20},60%,${30 + r * 4}%)`; c.beginPath(); c.arc(cx, cy, s / 7, 0, Math.PI); c.fill(); }
+               const g = .5 + .5 * Math.sin(t / 200); _dot(c, x + s * .3, y + s * .45, s * .06, `rgba(255,${120 + g * 100},0,1)`); _dot(c, x + s * .7, y + s * .45, s * .06, `rgba(255,${120 + g * 100},0,1)`); }) },
+  pebble:    { name: "Pebble", draw: (c, x, y, s) => _clip(c, x, y, s, () => { _fill(c, x, y, s, "#9e9e9e");
+               [[.25, .3, .12], [.65, .25, .09], [.45, .7, .15], [.8, .7, .08]].forEach(([a, b2, r]) => _dot(c, x + s * a, y + s * b2, s * r, "#757575")); }) },
+  crystal:   { name: "Crystal", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               c.fillStyle = _grad(c, x, y, s, ["#80deea", "#e1f5fe", "#4dd0e1"]); c.fillRect(x, y, s, s);
+               c.strokeStyle = "rgba(255,255,255,.9)"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, y + s * .6); c.lineTo(x + s * .4, y); c.lineTo(x + s, y + s * .5); c.lineTo(x + s * .5, y + s); c.closePath(); c.stroke();
+               const sx = x + ((t / 8) % (s * 2)) - s / 2; c.fillStyle = "rgba(255,255,255,.4)"; c.fillRect(sx, y, 6, s); }) },
+  titanCore: { name: "Titan Core", draw: (c, x, y, s, b, t) => _clip(c, x, y, s, () => {
+               _fill(c, x, y, s, "#37474f");
+               c.strokeStyle = "#ff9100"; c.lineWidth = 2; [[.2, 0, .35, .4], [.8, 0, .6, .45], [0, .8, .4, .6], [1, .9, .62, .58]].forEach(([a1, b1, a2, b2]) => { c.beginPath(); c.moveTo(x + s * a1, y + s * b1); c.lineTo(x + s * a2, y + s * b2); c.stroke(); });
+               const g = .6 + .4 * Math.sin(t / 160); const gr = c.createRadialGradient(x + s / 2, y + s / 2, 1, x + s / 2, y + s / 2, s * .3);
+               gr.addColorStop(0, `rgba(255,${200 * g},60,1)`); gr.addColorStop(1, "rgba(255,80,0,0)"); c.fillStyle = gr; c.fillRect(x, y, s, s); }) },
 };
 Object.entries(EXTRA_SKINS).forEach(([sid, r]) => { SKINS[sid].rarity = r; SKINS[sid].pack = "legendary"; });
 // fill in rarity/pack from SKIN_PACKS

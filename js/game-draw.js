@@ -14,7 +14,7 @@ function renderRulePanel() {
   add.innerHTML = ""; rem.innerHTML = "";
   Object.entries(RULES).forEach(([id, r]) => {
     if (MODE === "competitive" && r.type !== "passive") return;
-    if (r.limited) return;
+    if (r.limited || r.platinum) return;
     const b = document.createElement("button");
     const active = hasRule(id);
     b.className = active ? "rem" : "add";
@@ -71,7 +71,7 @@ function draw(pos0, t) {
   const holder = ball && ball.state === "held" ? ball.holder : null;
   const holderP = holder && players[holder];
   const holderCharge = holder === me.id ? myCharge
-    : (holderP && holderP.chargeStart ? Math.min(0.97, Math.max(0, (t - holderP.chargeStart) / CHARGE_TIME)) : 0);
+    : (holderP && holderP.chargeStart ? Math.min(0.97, Math.max(0, (t - holderP.chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? 2 : 1)))) : 0);
   const holderAim = holder === me.id ? lockedTarget : (holderP ? holderP.aim : null);
   const forced = holder ? forcedSet(holder).length > 0 : false;
 
@@ -103,7 +103,7 @@ function draw(pos0, t) {
     let sx = 0, sy = 0;
     if (isHolder && holderCharge > 0.6) { const s = (holderCharge - 0.6) * 8; sx = (Math.random() - 0.5) * s; sy = (Math.random() - 0.5) * s; }
 
-    const gr = gripOf(id), C = gr && gr.giant ? CUBE * 1.5 : CUBE;
+    const gr = gripOf(id), C = gr && gr.giant ? CUBE * (gr.giant === true ? 1.5 : gr.giant) : CUBE;
     ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(q.x - C / 2 + 4 + sx, q.y - C / 2 + 6 + sy, C, C);
     const X = q.x - C / 2 + sx, Y = q.y - C / 2 + sy;
     if (p.out) { ctx.fillStyle = "#3a3d46"; ctx.fillRect(X, Y, C, C); }
@@ -141,6 +141,8 @@ function draw(pos0, t) {
     if (ball && ball.state === "held" && ball.holder === id && ball.decoy && !ball.nullified && id === me.id) tags.push("🪞 decoy on");
     const heldBy = ball && ball.state === "held" && ball.holder === id && !ball.nullified;
     if (heldBy && ball.slow) tags.push("🌟 slow throw");
+    if (heldBy && ball.heavy) tags.push("🪨 heavy ball");
+    if (heldBy && id === me.id && ball.boomerang) tags.push("🪃 boomerang");
     if (heldBy && ball.warcry) tags.push("📢 can't stop!");
     if (heldBy && id === me.id && ball.ghost) tags.push("👻 ghost throw");
     if (heldBy && id === me.id && ball.hellfire) tags.push("😈 hellfire");
@@ -201,14 +203,16 @@ function draw(pos0, t) {
       }
       bx = a.x + (b.x - a.x) * p; by = a.y + (b.y - a.y) * p;
       scale = 1 + Math.sin(p * Math.PI) * 0.6;
-      fire = !ball.nullified && (ball.fireball || (ball.hellfire && p >= 0.8));
-      if (ball.ghost && !ball.nullified && ball.from !== me.id && p < 0.9) bx = undefined;       // Ghost Ball: invisible until it's nearly there
-      if (ball.fake && pos[ball.fake] && !ball.nullified) {                                       // Phantom Throw: a see-through fake
-        const f = pos[ball.fake], fx2 = a.x + (f.x - a.x) * p, fy2 = a.y + (f.y - a.y) * p, s2 = 16 * scale;
+      const hellAt = ball.hellfire === true ? 0.8 : ball.hellfire, ghostTo = ball.ghost === 2 ? 0.97 : 0.9;
+      fire = !ball.nullified && (ball.fireball || (ball.hellfire && p >= hellAt));
+      if (ball.ghost && !ball.nullified && ball.from !== me.id && p < ghostTo) bx = undefined;       // Ghost Ball: invisible until it's nearly there
+      [ball.fake, ball.fake2].forEach(fk => {                                                        // Phantom Throw: see-through fakes
+        if (!fk || !pos[fk] || ball.nullified) return;
+        const f = pos[fk], fx2 = a.x + (f.x - a.x) * p, fy2 = a.y + (f.y - a.y) * p, s2 = 16 * scale;
         ctx.save(); ctx.globalAlpha = 0.3; ctx.translate(fx2, fy2); ctx.rotate(performance.now() / 150);
         ctx.fillStyle = "#fff"; ctx.fillRect(-s2 / 2, -s2 / 2, s2, s2); ctx.restore();
-      }
-      const ghostHide = ball.ghost && !ball.nullified && p < 0.9;
+      });
+      const ghostHide = ball.ghost && !ball.nullified && p < ghostTo;
       if (ball.to === me.id && p >= myCatchFrom() && !ghostHide) {
         ctx.strokeStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(b.x, b.y, CUBE, 0, Math.PI * 2); ctx.stroke();
@@ -228,7 +232,7 @@ function draw(pos0, t) {
       const s = 16 * scale;
       if (fire) { ctx.fillStyle = "rgba(255,87,34,0.35)"; ctx.beginPath(); ctx.arc(bx, by, s * 1.3, 0, Math.PI * 2); ctx.fill(); }
       ctx.save(); ctx.translate(bx, by); ctx.rotate(performance.now() / 150);
-      ctx.fillStyle = fire ? "#ff7043" : ball.jackpot ? `hsl(${(performance.now() / 4) % 360},90%,60%)` : "#fff"; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.fillStyle = fire ? (ball.platFire ? `hsl(${190 + Math.sin(performance.now() / 90) * 20},100%,75%)` : "#ff7043") : ball.jackpot ? `hsl(${(performance.now() / 4) % 360},90%,60%)` : "#fff"; ctx.fillRect(-s / 2, -s / 2, s, s);
       ctx.strokeStyle = fire ? "#bf360c" : "#ff9800"; ctx.lineWidth = 2; ctx.strokeRect(-s / 2, -s / 2, s, s);
       ctx.restore();
     }
@@ -303,7 +307,8 @@ function draw(pos0, t) {
     else msg = charging ? "Charging… let go to fake!" : "You've got the ball. Aim, then hold SPACE";
   }
   else if (ballComingToMe() && ball.ghost && !ball.nullified && localProgress(ball) < 0.9) msg = "Watch the thrower… B = clap, SPACE = catch";
-  else if (ballComingToMe()) msg = (ball.fireball || (ball.hellfire && localProgress(ball) >= 0.8)) && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
+  else if (ballComingToMe() && ball.platFire && !ball.nullified) msg = "💎🔥 PLATINUM FIREBALL! DON'T CLAP, DON'T CATCH!";
+  else if (ballComingToMe()) msg = (ball.fireball || (ball.hellfire && localProgress(ball) >= (ball.hellfire === true ? 0.8 : ball.hellfire))) && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
   else if (ball.state === "held" && !ball.nullified && (doubles[ball.holder] || {})[me.id]) msg = `G G G to sacrifice and take ${nm(ball.holder)} out with you`;
   else msg = "Watch the thrower… B = clap, SPACE = catch";
   ctx.fillText(msg, 480, 330);

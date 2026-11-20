@@ -72,7 +72,10 @@ function applyState(st) {
 function startGameScreen(key) {
   ROOM_KEY = key; inGame = true;
   me.name = players[me.id] ? players[me.id].name : "";
-  $("roomLabel").textContent = IS_RISK ? `🎲 High Risk · stake ⭐ ${(ball && ball.stake) || 0}`
+  const sl = /^STORY([1-6])/.exec(key), gr = /^GRIND([EMHS])/.exec(key);
+  $("roomLabel").textContent = sl ? `📖 Story · Level ${sl[1]}: ${STORY_LEVELS[sl[1] - 1].name}`
+    : gr ? `🤖 Bot Grind · 2x ${({ E: "Easy", M: "Medium", H: "Hard", S: "Super Hard" })[gr[1]]} · +${({ E: 5, M: 10, H: 20, S: 40 })[gr[1]]} a win`
+    : IS_RISK ? `🎲 High Risk · stake ⭐ ${(ball && ball.stake) || 0}`
     : IS_PUBLIC ? "🔎 Matchmade · 🏆 Competitive · earns points"
     : `Room ${key.replace(/^(CAS|COMP)/, "")} · ${MODE === "competitive" ? "🏆 Competitive · private, no points" : "🎉 Casual"}`;
   document.addEventListener("visibilitychange", () => send({ t: "away", away: !!document.hidden }));
@@ -156,6 +159,7 @@ window.addEventListener("keydown", e => {
   const k = e.key.toLowerCase(), act = actionFor(k);
   if (act === "throw" || k === " ") e.preventDefault();
   if (e.repeat) return;
+  if (S && S.story) { storyKey(act, k); return; }          // story levels 2-6 have their own controls
   if (act === "throw") {
     if (iHaveBall()) {
       if (ball.lockUntil && now() < ball.lockUntil) return;
@@ -181,7 +185,7 @@ window.addEventListener("keydown", e => {
   else if (iHaveBall() && !act && ["arrowleft", "arrowright"].includes(k)) cycleTarget(k === "arrowleft" ? -1 : 1);
 });
 window.addEventListener("keyup", e => {
-  if (!inGame || actionFor(e.key.toLowerCase()) !== "throw") return;
+  if (!inGame || actionFor(e.key.toLowerCase()) !== "throw" || (S && S.story)) return;
   charging = false; myCharge = 0;
   send({ t: "spaceUp" });
 });
@@ -211,6 +215,28 @@ $("voteBotsBtn").onclick = () => send({ t: "vote" });
 $("skipRule").onclick = () => send({ t: "rule", action: "skip" });
 function chooseRule(action, id) { send({ t: "rule", action, id }); }
 
+// ---------------------------------------------------------------- chat (the server filters swearing)
+let chatShown = -1;
+function renderChat() {
+  const c = (S && S.chat) || [], last = c.length ? c[c.length - 1].id : 0;
+  if (last === chatShown) return;
+  chatShown = last;
+  const box = $("chatMsgs");
+  box.innerHTML = c.length ? c.map(x => `<div><b style="color:${(players[x.by] && players[x.by].color) || "#cfd3e0"}">${escHtml(x.n)}:</b> ${escHtml(x.m)}</div>`).join("") : `<div class="muted small">No messages yet. Say hi!</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+function sendChat() {
+  const v = $("chatIn").value.trim(); if (!v) return;
+  send({ t: "chat", m: v }); $("chatIn").value = "";
+}
+$("chatSend").onclick = sendChat;
+$("chatIn").addEventListener("keydown", e => {
+  e.stopPropagation();
+  if (e.key === "Enter") sendChat();
+  if (e.key === "Escape") $("chatIn").blur();
+});
+$("chatIn").addEventListener("keyup", e => e.stopPropagation());
+
 // ---------------------------------------------------------------- effects other players cause (sounds + overlays)
 let seenFx = {};
 function effectSounds() {
@@ -228,7 +254,8 @@ function overlays() {      // full-screen Flash and Jump Scare
   const ov = $("fxOverlay"); if (!ov) return;
   const f = fx.flash, t = now();
   let white = 0;
-  if (f && f.by !== me.id) { if (t >= f.at && t < f.at + 1000) white = 1; else if (t >= f.at + 1000) white = Math.max(0, 1 - (t - f.at - 1000) / 600); }
+  const wd = (f && f.white) || 1000;
+  if (f && f.by !== me.id) { if (t >= f.at && t < f.at + wd) white = 1; else if (t >= f.at + wd) white = Math.max(0, 1 - (t - f.at - wd) / 600); }
   const scary = performance.now() < jumpScareUntil;
   ov.style.display = white > 0 || scary ? "flex" : "none";
   ov.style.background = scary ? "#000" : `rgba(255,255,255,${white})`;
@@ -290,6 +317,15 @@ function chargeColor(c) {
 // ---------------------------------------------------------------- every frame
 function loop() {
   if (!inGame) return;
+  const solo = S && (S.story || S.storyLevel || S.grind);
+  $("chatBox").style.display = solo ? "none" : ""; $("panels").style.display = S && S.story ? "none" : "";
+  $("controls").style.display = S && S.story ? "none" : ""; $("logRow").style.display = S && S.story ? "none" : "";
+  if (S && S.story) {                                       // story levels 2-6: side-on arena
+    $("startBtn").style.display = "none"; $("voteBotsBtn").style.display = "none"; $("removeBotsBtn").style.display = "none";
+    drawStory(now()); storyWindows(); overlays();
+    $("log").innerHTML = "";
+    requestAnimationFrame(loop); return;
+  }
   const pos = layout(); lastPos = pos;
   const t = now();
   // my aim (the server checks it; this just tells it where I'm pointing)
@@ -299,7 +335,7 @@ function loop() {
     else if (hasRule("spinning") && opts.length) lockedTarget = opts[(Math.floor((t - (ball.heldSince || t)) / 5000) + (ball.seq % 97)) % opts.length];
     else { if (!opts.includes(lockedTarget)) lockedTarget = null; if (mouse.moved || !lockedTarget) lockedTarget = pickTargetFromMouse(pos, opts); }
     if (lockedTarget !== lastSentAim) { send({ t: "aim", target: lockedTarget || null }); lastSentAim = lockedTarget; }
-    if (charging) myCharge = Math.min(1, (performance.now() - chargeStart) / CHARGE_TIME);
+    if (charging) myCharge = Math.min(1, (performance.now() - chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? 2 : 1)));
   } else lastSentAim = undefined;
   // other people's claps (sound + animation)
   Object.entries(players).forEach(([id, p]) => {
@@ -316,8 +352,10 @@ function loop() {
   if (IS_RISK) { const host = isHost() && ball && ball.state === "lobby"; $("startBtn").style.display = host ? "" : "none"; if (host) $("startBtn").textContent = `Start (everyone pays ⭐ ${ball.stake})`; }
   else $("startBtn").style.display = IS_PUBLIC ? "none" : "";
   $("log").innerHTML = ((S && S.log) || []).slice(-6).reverse().map(l => `<div>${escHtml(l.m)}</div>`).join("");
+  renderChat();
   draw(pos, t);
   overlays();
+  if (S && S.storyLevel) { storyWindows(); $("startBtn").style.display = "none"; }
   renderHud();
   renderRulePanel();
   requestAnimationFrame(loop);
