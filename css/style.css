@@ -232,3 +232,18 @@ body.ev-golden #chatBox { background: #2b2108; }
 #storyModal p { margin: 0; }
 .storyBig { font-size: 64px; }
 .storyPts { font-size: 22px; font-weight: 800; color: #ffd54f; }
+/* Play tab: 4 mode cards in one row, and clear space between them and the box below */
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.mode { min-width: 0; }
+@media (max-width: 900px) { .modes { grid-template-columns: repeat(2, 1fr); } }
+#storyBox, #grindBox, #privateBox, #matchBox { margin-top: 0; margin-bottom: 16px; }
+#loadoutSummary { margin-top: 16px; }
+
+/* Daily quests */
+.questList { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.quest { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.quest.ready { border-color: #f5c542; box-shadow: 0 0 0 1px #f5c542 inset; }
+.quest.claimed { opacity: .6; }
+.questTop { display: flex; gap: 10px; align-items: center; }
+.questBar { height: 10px; border-radius: 6px; background: #2b2f3a; overflow: hidden; }
+.questBar > div { height: 100%; background: linear-gradient(90deg, #4fa3ff, #7ee787); transition: width .4s; }

@@ -49,6 +49,7 @@
     <button data-tab="platinum">💎 Platinum</button>
     <button data-tab="friends">👥 Friends <span id="friendBadge"></span></button>
     <button data-tab="board">🎟️ Board</button>
+    <button data-tab="quests">🎯 Quests <span id="questBadge"></span></button>
   </div>
 
   <div id="eventBanner" class="eventBanner" hidden></div>
@@ -135,6 +136,14 @@
         <b>90% chance it's gone forever</b>. Only one copy is risked at a time, so extras are the safest to try with.</div>
     </div>
     <div id="platList" class="platList"></div>
+  </div>
+
+  <div id="tab-quests" class="tab" hidden>
+    <div class="card platHead">
+      <h2 style="margin:0">🎯 Daily Quests</h2>
+      <div>4 new quests every day. Finish one, then press <b>Claim</b> to get the points. <span class="muted" id="questReset"></span></div>
+    </div>
+    <div id="questList" class="questList"></div>
   </div>
 
   <div id="tab-friends" class="tab" hidden>

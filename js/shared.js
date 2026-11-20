@@ -107,8 +107,12 @@ const PLATINUM = {
   phantomThrow: "Throws two fakes as well as the real ball.",
   vengeance: "Works up to 2 turns after you're out.",
   devilsDeal: "20% chance to steal instead of 10%.",
+  heavyBall: "Their bar fills 3x slower instead of 2x.",
+  boomerang: "2 uses each round.",
+  shockwave: "Stuns them for 3 seconds instead of 1.5.",
+  titanThrow: "Flies 55% faster instead of 40%.",
 };
-const PLAT_TWO_USES = ["doubleForce", "antiForce", "counterForce", "absoluteCounter", "ward", "decoy", "clone", "warCry", "fullWipe"];
+const PLAT_TWO_USES = ["boomerang", "doubleForce", "antiForce", "counterForce", "absoluteCounter", "ward", "decoy", "clone", "warCry", "fullWipe"];
 Object.keys(PLATINUM).forEach(id => {
   const b = RULES[id];
   RULES["plat_" + id] = { name: "Platinum " + b.name, type: "ability", platinum: true, base: id, limited: b.limited, icon: b.icon, desc: b.desc + " PLATINUM: " + PLATINUM[id] };
@@ -204,6 +208,6 @@ function skinRarity(id) {
 const ECON = {
   START_POINTS: 0, PACK_COST: 50, SKIN_PACK_COST: 100, TRADE_COST: 5,
   WIN_POINTS: 25, ELIM_POINTS: 5, RISK_MIN_STAKE: 5, BAN_MS: 30 * 60 * 1000,
-  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 2, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", MAX_PLAYERS: 6,
+  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", MAX_PLAYERS: 6,
 };
 

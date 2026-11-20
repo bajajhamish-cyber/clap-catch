@@ -88,13 +88,14 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   if (currentTab === "risk") refreshRisk();
   if (currentTab === "friends") refreshFriends();
   if (currentTab === "board") refreshBoard();
+  if (currentTab === "quests") api("me").then(setProfile).catch(() => {});
 });
 function renderAll() {
   if (!PROFILE) return;
   el("whoami").textContent = "👤 " + PROFILE.username;
   el("pointsLbl").textContent = "⭐ " + PROFILE.points + " points";
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
-  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum();
+  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests();
   el("friendBadge").textContent = PROFILE.friendIn ? `(${PROFILE.friendIn})` : "";
   showNotices();
 }
@@ -260,6 +261,35 @@ function renderStory() {
   document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => "STORY" + b.dataset.story + Math.random().toString(36).slice(2, 8).toUpperCase()));
 }
 document.querySelectorAll("[data-grind]").forEach(b => b.onclick = () => enterRoom(async () => "GRIND" + b.dataset.grind + Math.random().toString(36).slice(2, 8).toUpperCase()));
+
+// ---------------------------------------------------------------- Daily quests
+const QUEST_ICON = { win: "🏆", play: "🎮", elim: "💥", mode: "🗺️" };
+function renderQuests() {
+  const Q = PROFILE.quests; if (!Q) return;
+  const ready = Q.list.filter(q => q.progress >= q.target && !q.claimed).length;
+  el("questBadge").textContent = ready ? `(${ready})` : "";
+  el("questList").innerHTML = Q.list.map((q, i) => {
+    const pct = Math.round(100 * Math.min(1, q.progress / q.target)), done = q.progress >= q.target;
+    const icon = q.kind === "mode" ? (q.mode.startsWith("grind") ? "🤖" : "📖") : QUEST_ICON[q.kind];
+    return `<div class="card quest ${q.claimed ? "claimed" : done ? "ready" : ""}"><div class="questTop"><span class="platIcon">${icon}</span>
+      <div style="flex:1"><b>${esc(q.text)}</b><div class="muted small">Reward: ⭐ ${q.reward}</div></div></div>
+      <div class="questBar"><div style="width:${pct}%"></div></div>
+      <div class="row" style="justify-content:space-between"><span class="small">${q.progress} / ${q.target}</span>
+      ${q.claimed ? `<span class="small" style="color:#7ee787">✅ Claimed</span>` : `<button type="button" data-quest="${i}" ${done ? "" : "disabled"}>Claim ⭐ ${q.reward}</button>`}</div></div>`;
+  }).join("");
+  document.querySelectorAll("[data-quest]").forEach(b => b.onclick = async () => {
+    if (busy) return; busy = true;
+    try { const r = await api("questClaim", { i: +b.dataset.quest }); toast(`+${r.reward} points!`); playTone(990, 0.3, "triangle", 0.15); setProfile(r.me); }
+    catch (e) { toast(e.message, true); } finally { busy = false; }
+  });
+  questClock();
+}
+function questClock() {
+  const Q = PROFILE && PROFILE.quests; if (!Q) return;
+  const left = Q.resetsAt - (Date.now() + clockSkew);
+  el("questReset").textContent = left > 0 ? `New quests in ${timeLeft(left)}.` : "New quests are ready!";
+}
+setInterval(() => { questClock(); if (PROFILE && PROFILE.quests && Date.now() + clockSkew > PROFILE.quests.resetsAt + 2000 && !inGame) { PROFILE.quests.resetsAt = Infinity; api("me").then(setProfile).catch(() => {}); } }, 30000);
 
 // ---------------------------------------------------------------- Platinum tab
 function renderPlatinum() {

@@ -71,7 +71,7 @@ function draw(pos0, t) {
   const holder = ball && ball.state === "held" ? ball.holder : null;
   const holderP = holder && players[holder];
   const holderCharge = holder === me.id ? myCharge
-    : (holderP && holderP.chargeStart ? Math.min(0.97, Math.max(0, (t - holderP.chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? 2 : 1)))) : 0);
+    : (holderP && holderP.chargeStart ? Math.min(0.97, Math.max(0, (t - holderP.chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? (ball.heavy === 3 ? 3 : 2) : 1)))) : 0);
   const holderAim = holder === me.id ? lockedTarget : (holderP ? holderP.aim : null);
   const forced = holder ? forcedSet(holder).length > 0 : false;
 

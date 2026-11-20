@@ -47,6 +47,7 @@ function joinGame(key) {
       else if (m.t === "error") { if (!settled) { settled = true; if (/daily limit/i.test(m.m)) checkLimit(); reject(new Error(m.m)); } }
       else if (m.t === "kicked") { toast(m.m, true); setTimeout(() => location.reload(), 2500); joinedOK = false; }
       else if (m.t === "points" && typeof onPoints === "function") onPoints(m.points);
+      else if (m.t === "quests" && m.done) m.done.forEach(t => toast(`🎯 Quest done: ${t}! Claim it in the Quests tab.`));
     };
     sock.onclose = () => {
       if (!settled) { settled = true; checkLimit().then(lim => reject(new Error(lim ? "The game is resting until its daily limit resets" : "Couldn't connect to the game server"))); return; }
@@ -335,7 +336,7 @@ function loop() {
     else if (hasRule("spinning") && opts.length) lockedTarget = opts[(Math.floor((t - (ball.heldSince || t)) / 5000) + (ball.seq % 97)) % opts.length];
     else { if (!opts.includes(lockedTarget)) lockedTarget = null; if (mouse.moved || !lockedTarget) lockedTarget = pickTargetFromMouse(pos, opts); }
     if (lockedTarget !== lastSentAim) { send({ t: "aim", target: lockedTarget || null }); lastSentAim = lockedTarget; }
-    if (charging) myCharge = Math.min(1, (performance.now() - chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? 2 : 1)));
+    if (charging) myCharge = Math.min(1, (performance.now() - chargeStart) / (CHARGE_TIME * (ball.heavy && !ball.nullified ? (ball.heavy === 3 ? 3 : 2) : 1)));
   } else lastSentAim = undefined;
   // other people's claps (sound + animation)
   Object.entries(players).forEach(([id, p]) => {

@@ -212,6 +212,27 @@ const TUT_SLIDES = [
     },
   },
   {
+    title: "📖 Story mode and 🤖 Bot Grind",
+    text: "On the <b>▶ Play</b> tab: <b>📖 Story</b> is 6 levels with moves you won't find anywhere else. Beat a level for the first time for <b>+20 points</b>, and beat the boss to unlock new packs. <b>🤖 Bot Grind</b> is just you against 2 bots, as often as you like: Easy +5, Medium +10, Hard +20, Super Hard +40 a win.",
+    draw(c, t) {
+      const f = (t % 3000) / 3000;
+      [[80, "1"], [150, "2"], [220, "3"], [290, "4"], [360, "5"]].forEach(([x, n], i) => { c.fillStyle = f * 6 > i ? "#2e7dff" : "#2b2f3a"; c.fillRect(x - 25, 40, 50, 40); tText(c, n, x, 67, "#fff", 18); });
+      c.fillStyle = f > 0.85 ? "#c62828" : "#2b2f3a"; c.fillRect(405, 35, 60, 50); tText(c, "👑", 435, 70, "#fff", 24);
+      tCube(c, 240, 190, "#4fc3f7", "You", 36); tCube(c, 120, 190, "#90a4ae", "🤖", 30); tCube(c, 360, 190, "#90a4ae", "🤖", 30);
+      tText(c, "+40 a win (Super Hard)", 240, 245, "#ffd54f", 14);
+    },
+  },
+  {
+    title: "💎 Platinum and 🎯 Daily Quests",
+    text: "In the <b>💎 Platinum</b> tab you can risk one copy of an ability: <b>10%</b> it becomes a better Platinum version, <b>90%</b> it's gone. The <b>🎯 Quests</b> tab has <b>4 new quests every day</b> (win games, play games, get people out, play a certain mode). Finish one and press <b>Claim</b> for points!",
+    draw(c, t) {
+      const f = (t % 3000) / 3000;
+      tText(c, "💎", 120, 110 + Math.sin(t / 250) * 5, "#b9f2ff", 46); tText(c, "10% Platinum · 90% gone", 120, 160, "#b9f2ff", 13);
+      c.fillStyle = "#2b2f3a"; c.fillRect(270, 70, 170, 12); c.fillStyle = "#7ee787"; c.fillRect(270, 70, 170 * Math.min(1, f * 1.3), 12);
+      tText(c, "🎯 Win 3 games", 355, 60, "#fff", 14); tText(c, f > 0.77 ? "✅ Claim ⭐ 30" : `${Math.min(3, Math.floor(f * 4))} / 3`, 355, 110, f > 0.77 ? "#ffd54f" : "#cfd3e0", 15);
+    },
+  },
+  {
     title: "🚀 You're ready!",
     text: "Quick recap: <kbd>Space</kbd> = charge/throw and catch · <kbd>B</kbd> = clap · <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> = abilities · fake people out! You can watch this again any time with the 📖 button at the top.",
     draw(c, t) {
