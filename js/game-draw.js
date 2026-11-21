@@ -76,7 +76,8 @@ function draw(pos0, t) {
   const forced = holder ? forcedSet(holder).length > 0 : false;
 
   // aim line
-  if (holder && holderAim && pos[holder] && pos[holderAim]) {
+  const smoked = ball && ball.smoke && !ball.nullified && holder && holder !== me.id;       // Smokescreen: you can't see their bar (Platinum: or aim)
+  if (holder && holderAim && pos[holder] && pos[holderAim] && !(smoked && ball.smoke === 2)) {
     const a = pos[holder], b = pos[holderAim];
     ctx.strokeStyle = forced ? "#c77dff" : chargeColor(holderCharge); ctx.globalAlpha = 0.85; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
     ctx.lineDashOffset = -performance.now() / 30;
@@ -154,6 +155,7 @@ function draw(pos0, t) {
     if (heldBy && id === me.id && ball.ghost) tags.push("👻 ghost throw");
     if (heldBy && id === me.id && ball.hellfire) tags.push("😈 hellfire");
     if (heldBy && id === me.id && ball.phantom) tags.push("🎭 phantom");
+    if (p.silenced && p.silenced >= TURN && !p.out) tags.push("🤫 silenced");
     if (!p.out && p.cornered && TURN < p.cornered) tags.push("🦬 neighbours only");
     if (!p.out && gr && !gr.giant) tags.push("🙌 wide grip");
     if (p.out && id === me.id && canUse("vengeance") === "") tags.push("🗡️ VENGEANCE ready!");
@@ -173,10 +175,16 @@ function draw(pos0, t) {
       }
     }
     // throw bar
-    if (isHolder && holderCharge > 0.001) {
+    if (isHolder && holderCharge > 0.001 && !smoked) {
       const w = 70, h = 9, bx = q.x - w / 2, by = q.y - CUBE / 2 - 22;
       ctx.fillStyle = "#000a"; ctx.fillRect(bx - 2, by - 2, w + 4, h + 4);
       ctx.fillStyle = chargeColor(holderCharge); ctx.fillRect(bx, by, w * holderCharge, h);
+    }
+    if (isHolder && smoked) { ctx.font = "bold 13px Nunito, system-ui"; ctx.fillStyle = "#b0bec5"; ctx.fillText("💨 ???", q.x, q.y - CUBE / 2 - 14); }
+    // Short Fuse timer
+    if (isHolder && ball.fuse && !ball.nullified) {
+      const left = Math.max(0, (ball.fuse - t) / 1000);
+      ctx.fillStyle = "#ff7043"; ctx.font = "bold 14px Nunito, system-ui"; ctx.fillText(`🧨 ${left.toFixed(1)}s`, q.x, q.y - CUBE / 2 - 30);
     }
     // hot potato timer
     if (isHolder && hasRule("hotPotato") && ball.heldSince) {
@@ -265,7 +273,15 @@ function draw(pos0, t) {
   }
   ctx.textAlign = "center";
   if (ball && ball.nullified && roundRunning()) { ctx.font = "bold 18px Nunito, system-ui"; ctx.fillStyle = "#ff8a80"; ctx.fillText("⛔ FULL COUNTER: no abilities this turn", 480, 30); }
-  if (pickMode) { ctx.font = "bold 18px Nunito, system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText(`${RULES[pickMode].icon} Click ${TARGET_ABILITIES[pickMode]} (Esc to cancel)`, 480, 56); }
+  // Eclipse: everything goes dark except a circle of light around you
+  if (fxOn("eclipse") && fx.eclipse.by !== me.id && pos[me.id]) {
+    const m = pos[me.id], fade = Math.min(1, (fx.eclipse.until - now()) / 400, (now() - fx.eclipse.at) / 200);
+    const g = ctx.createRadialGradient(m.x, m.y, 55, m.x, m.y, 125);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(4,3,10,${0.97 * Math.max(0, fade)})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 960, 640);
+    ctx.font = "bold 16px Nunito, system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(200,190,255,.6)"; ctx.fillText("🌑 ECLIPSE", 480, 30);
+  }
+  if (pickMode) { ctx.font = "bold 18px Nunito, system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText(`${RULES[pickMode].icon} Click ${targetText(pickMode)} (Esc to cancel)`, 480, 56); }
   if (performance.now() < flash.until) { ctx.font = "bold 16px Nunito, system-ui"; ctx.fillStyle = "#ffd54f"; ctx.fillText(flash.msg, 480, 620); }
 
   // ability buttons, bottom left

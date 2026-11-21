@@ -29,6 +29,7 @@ el("adminEventBtn").onclick = () => {
   adminDo("adminConfig", { event: id, minutes: mins }, `${EVENTS[id].icon} ${EVENTS[id].name} is on for ${timeLeft(mins * 60000)}`).then(() => api("me").then(setProfile));
 };
 el("adminEventStop").onclick = () => adminDo("adminConfig", { stopEvent: true }, "Event stopped").then(() => api("me").then(setProfile));
+el("adminWorld2Btn").onclick = () => adminDo("adminConfig", { world2: !adminCfg.world2 }, `Story World 2 is now ${adminCfg.world2 ? "OFF" : "ON"}`).then(() => api("me").then(setProfile));
 el("adminTeamBtn").onclick = () => adminDo("adminConfig", { antiTeaming: !adminCfg.antiTeaming }, `Anti-teaming is now ${adminCfg.antiTeaming ? "OFF" : "ON"}`);
 
 async function refreshAdmin() {
@@ -40,6 +41,8 @@ async function refreshAdmin() {
     const ev = adminCfg.event && adminCfg.event.until > Date.now() ? adminCfg.event : null;
     el("adminEventNow").innerHTML = ev ? `Now: <b>${EVENTS[ev.id].icon} ${EVENTS[ev.id].name}</b>, ${timeLeft(ev.until - Date.now())} left` : "No event on right now.";
     el("adminTeamBtn").style.background = adminCfg.antiTeaming ? "#1f6f3a" : "#555";
+    el("adminWorld2Btn").textContent = adminCfg.world2 ? "ON" : "OFF";
+    el("adminWorld2Btn").style.background = adminCfg.world2 ? "#1f6f3a" : "#555";
     el("adminBanList").innerHTML = d.banned.length ? d.banned.map(b =>
       `<div class="adminRow"><span><b>${esc(b.username)}</b> · ${Math.ceil((b.until - Date.now()) / 60000)} min left</span><button type="button" data-unban="${esc(b.username)}">Unban</button></div>`).join("")
       : "<div class='muted'>Nobody is banned.</div>";

@@ -289,19 +289,30 @@ async function enterRoom(getKey) {
   catch (e) { showScreen("menuScreen"); toast(e.message, true); }
 }
 function renderStory() {
-  const done = PROFILE.storyDone || [];
-  el("storyLevels").innerHTML = STORY_LEVELS.map((L, i) => {
+  const done = PROFILE.storyDone || [], paid = PROFILE.storyPaid || [];
+  const row = (L, i) => {
     const n = i + 1, cleared = done.includes(n), open = n === 1 || done.includes(n - 1);
+    const note = cleared ? "✅ Beaten" : !open ? "Beat the level before to unlock" : paid.includes(n) ? "Beaten before the update (no points again)" : "+20 points the first time you beat it";
     return `<div class="storyLevel ${cleared ? "cleared" : open ? "open" : "locked"}"><div class="storyIcon">${open || cleared ? L.icon : "🔒"}</div>
-      <div><b>${n}. ${L.name}</b><div class="muted small">${cleared ? "✅ Beaten" : open ? "+20 points the first time you beat it" : "Beat the level before to unlock"}</div></div>
+      <div><b>${n}. ${L.name}</b><div class="muted small">${note}</div></div>
       <button type="button" data-story="${n}" ${open ? "" : "disabled"}>${cleared ? "Play again" : "Play"}</button></div>`;
-  }).join("") + (PROFILE.storyUnlocked ? `<div class="muted small" style="margin-top:8px">👑 You beat the boss! The Titan Pack and 3 new skin packs are in your Shop.</div>` : "");
-  document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => "STORY" + b.dataset.story + Math.random().toString(36).slice(2, 8).toUpperCase()));
+  };
+  const w1 = STORY_LEVELS.filter(L => L.world === 1), w2 = STORY_LEVELS.filter(L => L.world === 2);
+  let html = (paid.length && !done.length ? `<div class="warn">📖 Story mode got bigger: 10 levels now! Everyone starts again from level 1. You keep everything you unlocked, and levels you'd already beaten don't pay points twice.</div>` : "")
+    + `<h3 class="worldHead">🌍 World 1: Get your power back</h3>` + w1.map(row).join("")
+    + (PROFILE.storyUnlocked ? `<div class="muted small" style="margin:8px 0">👑 You beat the boss! The Titan Pack and 3 new skin packs are in your Shop.</div>` : "");
+  if (PROFILE.world2) {
+    html += `<h3 class="worldHead">🌒 World 2: The Shadow League</h3>`
+      + (done.includes(STORY_W1) ? w2.map((L, i) => row(L, i + STORY_W1)).join("") : `<div class="muted small">🔒 Beat the World 1 boss (level 10) to open World 2.</div>`)
+      + (PROFILE.story2Unlocked ? `<div class="muted small" style="margin-top:8px">🦹 You beat the Captain! The Shadow Pack is in your Shop and you get 2 extra daily quests.</div>` : "");
+  }
+  el("storyLevels").innerHTML = html;
+  document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => storyRoomKey(+b.dataset.story)));
 }
 document.querySelectorAll("[data-grind]").forEach(b => b.onclick = () => enterRoom(async () => "GRIND" + b.dataset.grind + Math.random().toString(36).slice(2, 8).toUpperCase()));
 
 // ---------------------------------------------------------------- Daily quests
-const QUEST_ICON = { win: "🏆", play: "🎮", elim: "💥", mode: "🗺️" };
+const QUEST_ICON = { win: "🏆", play: "🎮", elim: "💥", mode: "🗺️", storywin: "🌒", rare: "🎁" };
 function renderQuests() {
   const Q = PROFILE.quests; if (!Q) return;
   const ready = Q.list.filter(q => q.progress >= q.target && !q.claimed).length;
@@ -376,7 +387,7 @@ function renderShop() {
   const pts = PROFILE.points || 0;
   const ev = currentEvent(), lucky = ev && ev.id === "lucky";
   const odds = items => lucky ? luckyOdds(items) : items;
-  el("abilityPacks").innerHTML = (lucky ? `<div class="warn" style="grid-column:1/-1">🍀 <b>Lucky Event:</b> legendary items are 1.5% more likely!</div>` : "") + Object.entries(ABILITY_PACKS).filter(([, p]) => !p.story || PROFILE.storyUnlocked).map(([pid, p]) => `
+  el("abilityPacks").innerHTML = (lucky ? `<div class="warn" style="grid-column:1/-1">🍀 <b>Lucky Event:</b> legendary items are 1.5% more likely!</div>` : "") + Object.entries(ABILITY_PACKS).filter(([, p]) => !p.story || (p.story === 2 ? PROFILE.story2Unlocked : PROFILE.storyUnlocked)).map(([pid, p]) => `
     <div class="pack ${p.story ? "storyPack" : ""}"><div class="packHead">${p.icon} <b>${p.name}</b> ${p.story ? '<span class="tag">boss reward</span>' : ""}</div><div class="muted small">${p.theme}</div>
       <ul>${odds(p.items).map(([id, pct, r]) => `<li>${RULES[id].icon} ${RULES[id].name} ${rarityTag(r)} <span class="muted">${pct}%</span></li>`).join("")}</ul>
       <button data-buy-ability="${pid}" ${pts < ECON.PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.PACK_COST}</button></div>`).join("");

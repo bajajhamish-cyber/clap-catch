@@ -293,3 +293,5 @@ button:disabled { background: #3a3745; box-shadow: none; color: #9a95a8; }
 kbd { background: #2a2738; border-color: #3d3852; }
 body.ev-golden .tabs button { background: transparent; }
 body.ev-golden .tabs button.active { background: transparent; color: #ffd54f; border-bottom-color: #ffd54f; }
+
+.worldHead { margin: 14px 0 8px; font-size: 17px; }

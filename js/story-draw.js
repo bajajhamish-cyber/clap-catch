@@ -1,8 +1,16 @@
 // ======================================================================
-//  story-draw.js: draws Story levels 2-6 (side-on arena) and the level
-//  intro / "level complete" / "try again" windows for all 6 levels.
+//  story-draw.js: draws the side-on Story levels and the level
+//  intro / "level complete" / "try again" windows for all 20 levels.
 // ======================================================================
 let storyClapAt = 0, storyShownState = "", storyLevelShown = 0;
+// smooth movement: your lane changes show straight away (the server checks them a moment later)
+// and every character glides to its lane instead of jumping
+let predRow = null, predUntil = 0, glide = {}, glideAt = 0;
+function storyRoomKey(lv) { return "STORY" + String(lv).padStart(2, "0") + Math.random().toString(36).slice(2, 8).toUpperCase(); }
+function shownRow(st) {
+  if (predRow != null && performance.now() < predUntil && st.state === "play") return Math.max(0, Math.min(st.you.lanes.length - 1, predRow));
+  predRow = null; return st.you.row;
+}
 
 function isStory() { return !!(S && (S.story || S.storyLevel)); }
 function storyLevelNow() { return S ? (S.story ? S.story.level : S.storyLevel) : 0; }
@@ -10,8 +18,14 @@ function storyLevelNow() { return S ? (S.story ? S.story.level : S.storyLevel) :
 // ---------------------------------------------------------------- keys in story levels 2-6
 function storyKey(act, k) {
   const st = S && S.story; if (!st) return false;
-  if (act === "up") send({ t: "move", d: -1 });
-  else if (act === "down") send({ t: "move", d: 1 });
+  if (act === "up" || act === "down") {
+    const d = act === "up" ? -1 : 1;
+    if (st.state === "play" && st.you.lanes.length > 1) {
+      predRow = Math.max(0, Math.min(st.you.lanes.length - 1, shownRow(st) + d));
+      predUntil = performance.now() + 2 * (st.lat || 0) + 300;
+    }
+    send({ t: "move", d });
+  }
   else if (act === "left") send({ t: "aim", d: -1 });
   else if (act === "right") send({ t: "aim", d: 1 });
   else if (act === "clap") { send({ t: "clap" }); storyClapAt = performance.now(); playClap(); }
@@ -46,8 +60,9 @@ function storyWindows() {
     const r = (S.story && S.story.result) || S.storyResult;
     const pts = !r || r.pending ? "Saving…" : r.error ? "Couldn't save, try again later" : r.first ? "+20 points!" : "Already beaten before (no points this time)";
     html = `<div class="storyBig">🏆</div><h2>Level ${lv} complete!</h2><p class="storyPts">${pts}</p>
-      ${lv === 6 ? `<p>👑 You took your full power back from the boss!${r && r.unlocked ? " New packs are waiting in your Shop: the ⚡ Titan Pack and 3 new skin packs." : ""}</p>` : ""}
-      <div class="row" style="justify-content:center">${lv < 6 ? `<button type="button" id="storyNext">Next level ▶</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
+      ${lv === 10 ? `<p>👑 You took your full power back from the boss!${r && r.unlocked ? " New packs are waiting in your Shop: the ⚡ Titan Pack and 3 new skin packs." : ""}${PROFILE && PROFILE.world2 ? " But who was giving him orders? World 2 is open…" : ""}</p>` : ""}
+      ${lv === 20 ? `<p>🦹 The Captain is beaten and the Shadow League is finished!${r && r.unlocked ? " The 🌑 Shadow Pack is in your Shop, and you now get 2 extra daily quests." : ""}</p>` : ""}
+      <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) ? `<button type="button" id="storyNext">Next level ▶</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
   } else {
     html = `<div class="storyBig">💥</div><h2>Not this time</h2><p>${escHtml((S.story && S.story.reason) || "The bots won this one.")}</p>
       <div class="row" style="justify-content:center"><button type="button" id="storyRetry">Try again</button><button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
@@ -60,7 +75,7 @@ function storyWindows() {
   if (menu) menu.onclick = () => { box.style.display = "none"; $("leaveBtn").click(); };
   if (next) next.onclick = () => {
     box.style.display = "none"; $("leaveBtn").click();
-    setTimeout(() => enterRoom(async () => "STORY" + (lv + 1) + Math.random().toString(36).slice(2, 8).toUpperCase()), 400);
+    setTimeout(() => enterRoom(async () => storyRoomKey(lv + 1)), 400);
   };
 }
 
@@ -71,22 +86,35 @@ function drawStory(t) {
   const g = c.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, "#151821"); g.addColorStop(1, "#1d2230"); c.fillStyle = g; c.fillRect(0, 0, 960, 640);
   c.strokeStyle = "#2a3040"; c.setLineDash([8, 12]); c.lineWidth = 2; c.beginPath(); c.moveTo(480, 60); c.lineTo(480, 600); c.stroke(); c.setLineDash([]);
   const L = STORY_LEVELS[st.level - 1];
-  c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} Level ${st.level}: ${L.name}`, 16, 30);
-  // lanes (the white dots)
-  const dots = (x, ys) => ys.forEach(y => { c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y + CUBE / 2 + 12, 4, 0, Math.PI * 2); c.fill(); });
+  c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} ${L.world === 2 ? "World 2 · " : ""}Level ${st.level}: ${L.name}`, 16, 30);
+  // smooth gliding between lanes
+  if (storyLevelShown !== st.level) { storyLevelShown = st.level; glide = {}; predRow = null; }
+  const pnow = performance.now(), dt = Math.min(0.1, (pnow - (glideAt || pnow)) / 1000); glideAt = pnow;
+  const ease = (k, target) => {
+    if (glide[k] == null || Math.abs(glide[k] - target) > 600) glide[k] = target;
+    glide[k] += (target - glide[k]) * (1 - Math.exp(-dt * 20));
+    if (Math.abs(glide[k] - target) < 0.5) glide[k] = target;
+    return glide[k];
+  };
+  // lanes: a white dot in the middle of each one (you stand right on it)
+  const dots = (x, ys) => ys.forEach(y => {
+    c.strokeStyle = "rgba(255,255,255,.07)"; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 50, y); c.lineTo(x + 50, y); c.stroke();
+    c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2); c.fill();
+  });
   dots(st.you.x, st.you.lanes);
   st.enemies.forEach(e => { if (!e.boss && e.lanes.length > 1) dots(e.x, e.lanes); });
   // aiming (levels 4 and 5)
-  if (st.holding && st.targets && st.targets.length && (st.level === 4 || st.level === 5)) {
+  const myRow = shownRow(st), yy = ease("you", st.you.lanes[myRow]);
+  if (st.holding && st.targets && st.targets.length && (st.type === "aim" || st.type === "cross")) {
     const tg = st.targets[st.aim % st.targets.length], e = st.enemies[tg.e];
     c.strokeStyle = "#ff5252"; c.lineWidth = 3; c.beginPath(); c.arc(e.x, tg.y, 34, 0, Math.PI * 2); c.stroke();
     c.beginPath(); c.moveTo(e.x - 44, tg.y); c.lineTo(e.x + 44, tg.y); c.moveTo(e.x, tg.y - 44); c.lineTo(e.x, tg.y + 44); c.stroke();
-    c.setLineDash([6, 8]); c.strokeStyle = "rgba(255,82,82,.5)"; c.beginPath(); c.moveTo(st.you.x, st.you.lanes[st.you.row]); c.lineTo(e.x, tg.y); c.stroke(); c.setLineDash([]);
+    c.setLineDash([6, 8]); c.strokeStyle = "rgba(255,82,82,.5)"; c.beginPath(); c.moveTo(st.you.x, yy); c.lineTo(e.x, tg.y); c.stroke(); c.setLineDash([]);
   }
   // enemies
   st.enemies.forEach(e => {
-    const y = e.lanes[e.row];
     if (e.boss) { drawBoss(c, e, t); return; }
+    const y = ease("e:" + e.id, e.lanes[e.row]);
     if (!e.alive) { c.globalAlpha = 0.3; }
     c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(e.x - CUBE / 2 + 4, y - CUBE / 2 + 6, CUBE, CUBE);
     c.fillStyle = "#e53935"; c.fillRect(e.x - CUBE / 2, y - CUBE / 2, CUBE, CUBE);
@@ -96,7 +124,7 @@ function drawStory(t) {
     c.globalAlpha = 1;
   });
   // you
-  const yy = st.you.lanes[st.you.row], me2 = players[me.id] || {};
+  const me2 = players[me.id] || {};
   c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(st.you.x - CUBE / 2 + 4, yy - CUBE / 2 + 6, CUBE, CUBE);
   drawSkin(c, me2.skin || "default", st.you.x - CUBE / 2, yy - CUBE / 2, CUBE, me2.color || "#4fc3f7", performance.now());
   c.lineWidth = 4; c.strokeStyle = "#fff"; c.strokeRect(st.you.x - CUBE / 2, yy - CUBE / 2, CUBE, CUBE);
@@ -131,11 +159,12 @@ function drawStory(t) {
   }
   // progress + hint
   let info = "", hint = "";
-  if (st.level === 2) { info = st.holding ? "8 in a row!" : `Caught ${st.count} / 8 in a row`; hint = st.holding ? `Throw it back with ${keyName(KEYS.throw)}!` : `${keyName(KEYS.up)}/${keyName(KEYS.down)} to move · ${keyName(KEYS.clap)} clap · ${keyName(KEYS.throw)} catch`; }
-  if (st.level === 3) { info = st.count < 9 ? `Dodged ${st.count}` : "Catch it!"; hint = st.holding ? (st.dodgeMode ? `It's a dodgeball now. Throw it with ${keyName(KEYS.throw)}!` : `Press ${keyName(KEYS.dodge)} to make it a dodgeball`) : "Red ones: get out of the way. White ones: clap and catch."; }
-  if (st.level === 4) { info = `Balls left: ${3 - st.thrown}`; hint = `${keyName(KEYS.left)}/${keyName(KEYS.right)} to aim at a lane · ${keyName(KEYS.throw)} to throw. Time it!`; }
-  if (st.level === 5) { info = `Enemies left: ${st.enemies.filter(e => e.alive).length}`; hint = st.holding ? `${keyName(KEYS.left)}/${keyName(KEYS.right)} aim at one of the 4 enemy lanes · ${keyName(KEYS.throw)} throw · keep dodging!` : "Dodge the red ones. Catch the white one!"; }
-  if (st.level === 6) { const w = st.wave || 0; info = w <= 20 ? `Wave ${Math.min(20, w)} / 20` : "Final attack: catch the white ball!"; hint = "Dodge red · clap and catch white"; }
+  const dodgingWave = st.balls.some(b => b.by === "enemy" && b.kind === "dodge");
+  if (st.type === "catch") { info = st.holding ? `${st.need} in a row!` : `Caught ${st.count} / ${st.need} in a row`; hint = st.holding ? `Throw it back with ${keyName(KEYS.throw)}!` : `${keyName(KEYS.up)}/${keyName(KEYS.down)} to move · ${keyName(KEYS.clap)} clap · ${keyName(KEYS.throw)} catch`; }
+  if (st.type === "dodge") { info = st.holding ? "Throw it back!" : st.wave < st.waves || dodgingWave ? `Wave ${Math.max(1, st.wave)} / ${st.waves}` : "Catch it!"; hint = st.holding ? (st.dodgeMode ? `It's a dodgeball now. Throw it with ${keyName(KEYS.throw)}!` : `Press ${keyName(KEYS.dodge)} to make it a dodgeball`) : "Red ones: get out of the way. White ones: clap and catch."; }
+  if (st.type === "aim") { info = `Balls left: ${Math.max(0, st.ballsMax - st.thrown)}`; hint = `${keyName(KEYS.left)}/${keyName(KEYS.right)} to aim at a lane · ${keyName(KEYS.throw)} to throw. Time it!`; }
+  if (st.type === "cross") { info = `Enemies left: ${st.enemies.filter(e => e.alive).length}`; hint = st.holding ? `${keyName(KEYS.left)}/${keyName(KEYS.right)} aim at an enemy lane · ${keyName(KEYS.throw)} throw · keep dodging!` : "Dodge the red ones. Catch the white one!"; }
+  if (st.type === "boss") { const w = st.wave || 0; info = w <= st.waves ? `Wave ${Math.max(1, Math.min(st.waves, w))} / ${st.waves}` : "Final attack: catch the white ball!"; hint = "Dodge red · clap and catch white"; }
   c.font = "bold 16px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#ffd54f"; c.fillText(info, 16, 56);
   c.textAlign = "center"; c.fillStyle = "#cfd3e0"; c.font = "15px Nunito, system-ui"; c.fillText(hint, 480, 625);
 }
@@ -144,11 +173,18 @@ function ballShape(c, kind, s) {
   else { c.fillStyle = "#fff"; c.fillRect(-s / 2, -s / 2, s, s); }
 }
 function drawBoss(c, e, t) {
-  const x = e.x, y = 320, s = 190, angry = e.hp <= 2;
+  const x = e.x, y = 320, s = 190, angry = e.hp <= 2, cap = e.look === "captain", maxHp = e.maxHp || 5;
   if (!e.alive) c.globalAlpha = 0.35;
   c.fillStyle = "rgba(0,0,0,.4)"; c.fillRect(x - s / 2 + 8, y - s / 2 + 10, s, s);
-  const g = c.createLinearGradient(x, y - s / 2, x, y + s / 2); g.addColorStop(0, "#6a1b9a"); g.addColorStop(1, "#311b92"); c.fillStyle = g; c.fillRect(x - s / 2, y - s / 2, s, s);
-  c.fillStyle = "#ffd54f"; c.beginPath(); c.moveTo(x - 60, y - s / 2); c.lineTo(x - 40, y - s / 2 - 34); c.lineTo(x - 15, y - s / 2); c.lineTo(x, y - s / 2 - 44); c.lineTo(x + 15, y - s / 2); c.lineTo(x + 40, y - s / 2 - 34); c.lineTo(x + 60, y - s / 2); c.fill();
+  const g = c.createLinearGradient(x, y - s / 2, x, y + s / 2);
+  g.addColorStop(0, cap ? "#263238" : "#6a1b9a"); g.addColorStop(1, cap ? "#0d1117" : "#311b92"); c.fillStyle = g; c.fillRect(x - s / 2, y - s / 2, s, s);
+  if (cap) {          // the Captain: a dark captain's hat with a red badge
+    c.fillStyle = "#111"; c.fillRect(x - 80, y - s / 2 - 12, 160, 14); c.fillRect(x - 55, y - s / 2 - 52, 110, 42);
+    c.fillStyle = "#e53935"; c.beginPath(); c.arc(x, y - s / 2 - 30, 11, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#4dd0e1"; c.fillRect(x - s / 2, y + s / 2 - 16, s, 6);
+  } else {
+    c.fillStyle = "#ffd54f"; c.beginPath(); c.moveTo(x - 60, y - s / 2); c.lineTo(x - 40, y - s / 2 - 34); c.lineTo(x - 15, y - s / 2); c.lineTo(x, y - s / 2 - 44); c.lineTo(x + 15, y - s / 2); c.lineTo(x + 40, y - s / 2 - 34); c.lineTo(x + 60, y - s / 2); c.fill();
+  }
   const blink = Math.floor(t / 2400) % 8 === 0 && (t % 2400) < 150;
   c.fillStyle = "#fff"; c.fillRect(x - 55, y - 40, 36, blink ? 4 : 30); c.fillRect(x + 19, y - 40, 36, blink ? 4 : 30);
   if (!blink) { c.fillStyle = angry ? "#ff1744" : "#111"; c.fillRect(x - 45, y - 30, 14, 14); c.fillRect(x + 29, y - 30, 14, 14); }
@@ -158,6 +194,7 @@ function drawBoss(c, e, t) {
   c.globalAlpha = 1;
   // health bar
   c.fillStyle = "#111"; c.fillRect(x - 100, 40, 200, 22);
-  for (let i = 0; i < 5; i++) { c.fillStyle = i < e.hp ? "#e53935" : "#3a3d46"; c.fillRect(x - 96 + i * 39.2, 44, 36, 14); }
-  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("👹 THE BOSS", x, 34);
+  const seg = 196 / maxHp;
+  for (let i = 0; i < maxHp; i++) { c.fillStyle = i < e.hp ? "#e53935" : "#3a3d46"; c.fillRect(x - 96 + i * seg, 44, seg - 3, 14); }
+  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText(`${cap ? "🦹" : "👹"} ${(e.name || "The Boss").toUpperCase()}`, x, 34);
 }

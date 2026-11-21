@@ -10,7 +10,10 @@ const COLORS = ["#4fc3f7", "#ffb74d", "#ba68c8", "#4db6ac", "#f06292", "#aed581"
 let SD = null, S = null, players = {}, ball = null, rules = {}, doubles = {}, fx = {}, EVENT_ID = null, TURN = 0;
 // abilities where you click a player after pressing the key
 const TARGET_ABILITIES = { counterForce: "who they must throw to", neutralise: "who to Neutralise (costs you 5 points)",
-  heavenlyWrath: "who gets Heavenly Wrath (you give them 5 points)", devilsDeal: "who to make a Devil's Deal with (you pay them 500 points)" };
+  heavenlyWrath: "who gets Heavenly Wrath (you give them 5 points)", devilsDeal: "who to make a Devil's Deal with (you pay them 500 points)",
+  silence: "who to Silence" };
+const baseAbility = id => (id && id.startsWith("plat_") ? id.slice(5) : id);      // Platinum versions pick a target the same way
+const targetText = id => TARGET_ABILITIES[baseAbility(id)];
 let me = { id: null, name: "" };
 let MODE = "casual", IS_PUBLIC = false, IS_RISK = false, ROOM_KEY = "", inGame = false;
 let CHARGE_TIME = 1400, FLIGHT_TIME = 750, CATCH_FROM = 0.6, DF_GRACE_MS = 3000, HOT_POTATO_MS = 3000, BOT_WAIT_MS = 25000, DUEL_SPEEDUP = 0.88, MIN_FLIGHT = 300;
@@ -73,8 +76,8 @@ function applyState(st) {
 function startGameScreen(key) {
   ROOM_KEY = key; inGame = true;
   me.name = players[me.id] ? players[me.id].name : "";
-  const sl = /^STORY([1-6])/.exec(key), gr = /^GRIND([EMHS])/.exec(key);
-  $("roomLabel").textContent = sl ? `📖 Story · Level ${sl[1]}: ${STORY_LEVELS[sl[1] - 1].name}`
+  const sl = /^STORY(\d\d)/.exec(key), gr = /^GRIND([EMHS])/.exec(key), slv = sl ? +sl[1] : 0;
+  $("roomLabel").textContent = sl && STORY_LEVELS[slv - 1] ? `📖 Story · ${STORY_LEVELS[slv - 1].world === 2 ? "World 2 · " : ""}Level ${slv}: ${STORY_LEVELS[slv - 1].name}`
     : gr ? `🤖 Bot Grind · 2x ${({ E: "Easy", M: "Medium", H: "Hard", S: "Super Hard" })[gr[1]]} · +${({ E: 5, M: 10, H: 20, S: 40 })[gr[1]]} a win`
     : IS_RISK ? `🎲 High Risk · stake ⭐ ${(ball && ball.stake) || 0}`
     : IS_PUBLIC ? "🔎 Matchmade · 🏆 Competitive · earns points"
@@ -118,6 +121,7 @@ function gripOf(id) { const g = players[id] && players[id].grip; return g && TUR
 function fxOn(k) { const f = fx[k]; return !!f && (f.untilTurn == null || TURN <= f.untilTurn) && (f.until == null || now() < f.until); }
 function pickValid(id, target) {
   if (!players[target] || target === me.id) return false;
+  id = baseAbility(id);
   if (id === "counterForce") return isAlive(target) && !(ball && ball.holder === target);
   if (id === "devilsDeal") return !players[target].bot && !(fx.clone && fx.clone.id === target);
   return isAlive(target);
@@ -180,7 +184,7 @@ window.addEventListener("keydown", e => {
     if (!id) return;
     const why = canUse(id);
     if (why) { say(`${RULES[id].name}: ${why}`); return; }
-    if (TARGET_ABILITIES[id]) { pickMode = id; say(`Click ${TARGET_ABILITIES[id]} (Esc to cancel)`); return; }
+    if (targetText(id)) { pickMode = id; say(`Click ${targetText(id)} (Esc to cancel)`); return; }
     send({ t: "ability", id });
   } else if (iHaveBall() && (act === "left" || act === "right")) cycleTarget(act === "left" ? -1 : 1);
   else if (iHaveBall() && !act && ["arrowleft", "arrowright"].includes(k)) cycleTarget(k === "arrowleft" ? -1 : 1);

@@ -25,6 +25,11 @@ const RULES = {
   boomerang:     { name: "Boomerang",       type: "ability", story: true, icon: "🪃", desc: "While you hold the ball: your next throw comes straight back after they catch it, so they never get a turn. Be ready to clap and catch it yourself!" },
   shockwave:     { name: "Shockwave",       type: "ability", story: true, icon: "💥", desc: "When someone else has the ball: their bar empties and they can't charge for 1.5 seconds." },
   titanThrow:    { name: "Titan Throw",     type: "ability", story: true, icon: "⚡", desc: "While you hold the ball: your next throw is a fireball that flies 40% faster, and nobody can use abilities until it lands." },
+  // ---- Shadow Pack (unlocked by beating the World 2 boss)
+  shortFuse:     { name: "Short Fuse",      type: "ability", story: 2, icon: "🧨", desc: "When someone else has the ball: they have 4 seconds to throw it or they're OUT. Not on a heavy or stunned ball." },
+  smokescreen:   { name: "Smokescreen",     type: "ability", story: 2, icon: "💨", desc: "While you hold the ball: nobody else can see your throw bar until you throw, so they can't tell when it's coming." },
+  silence:       { name: "Silence",         type: "ability", story: 2, icon: "🤫", desc: "Click a player: they can't use any abilities for 2 turns." },
+  eclipse:       { name: "Eclipse",         type: "ability", story: 2, icon: "🌑", desc: "Everyone else's screen goes dark for 3 seconds. They can only see a small circle of light around themselves." },
 
   // ---- limited packs (only sold during their event; you keep them forever). Competitive only.
   // Illusioner
@@ -72,6 +77,9 @@ const ABILITY_PACKS = {
   // unlocked by beating the Story boss
   titan:     { name: "Titan Pack",     icon: "⚡", theme: "The boss's power, now yours", story: true,
                items: [["heavyBall", 45, "common"], ["boomerang", 40, "common"], ["shockwave", 14, "rare"], ["titanThrow", 1, "legendary"]] },
+  // unlocked by beating the World 2 boss (the Captain)
+  shadow:    { name: "Shadow Pack",    icon: "🌑", theme: "The Captain's sneaky tricks", story: 2,
+               items: [["shortFuse", 45, "common"], ["smokescreen", 40, "common"], ["silence", 14, "rare"], ["eclipse", 1, "legendary"]] },
 };
 // ---- Platinum: risk an ability in the Platinum tab, 10% chance it becomes its better version
 const PLATINUM = {
@@ -111,6 +119,10 @@ const PLATINUM = {
   boomerang: "2 uses each round.",
   shockwave: "Stuns them for 3 seconds instead of 1.5.",
   titanThrow: "Flies 55% faster instead of 40%.",
+  shortFuse: "Only 3 seconds to throw.",
+  smokescreen: "Hides your aim line too.",
+  silence: "Lasts 3 turns.",
+  eclipse: "Lasts 5 seconds.",
 };
 const PLAT_TWO_USES = ["boomerang", "doubleForce", "antiForce", "counterForce", "absoluteCounter", "ward", "decoy", "clone", "warCry", "fullWipe"];
 Object.keys(PLATINUM).forEach(id => {
@@ -119,21 +131,54 @@ Object.keys(PLATINUM).forEach(id => {
 });
 const PLAT_CHANCE = 0.1;
 
-// ---- Story mode
+// ---- Story mode: World 1 (levels 1-10) and World 2 (levels 11-20, switched on by the admin)
+const SK_MOVE = "<b>W</b>/<b>S</b>";
 const STORY_LEVELS = [
-  { name: "Warm Up", icon: "🌱", title: "Level 1: Warm Up",
+  // ---------------- World 1: get your power back
+  { world: 1, name: "Warm Up", icon: "🌱", title: "Level 1: Warm Up",
     text: "Someone stole your full power and gave it to the boss. First, get back into shape: beat <b>3 easy bots</b> in a normal game. Clap with <b>B</b>, catch with <b>Space</b>." },
-  { name: "Two Lanes", icon: "↕️", title: "Level 2: Two Lanes",
-    text: "New move! You stand on the left, the enemy on the right. Press <b>W</b> to move up and <b>S</b> to move down between the <b>white dots</b>. The enemy throws to one of them: get there, <b>clap</b>, then <b>catch</b>. No fakes here. Catch <b>8 in a row</b>, then throw it back with <b>Space</b>." },
-  { name: "Dodge!", icon: "🔴", title: "Level 3: Dodge!",
-    text: "Watch out for <b>dodgeballs</b>: red with a white outline. <b>Don't catch them, get out of their lane</b> with <b>W</b>/<b>S</b>. Now there are 3 lanes. Survive 6, then catch the normal ball, press <b>T</b> to turn it into a dodgeball and <b>Space</b> to throw it." },
-  { name: "Turn the Tables", icon: "🎯", title: "Level 4: Turn the Tables",
+  { world: 1, name: "Two Lanes", icon: "↕️", title: "Level 2: Two Lanes",
+    text: `New move! You stand on the left, the enemy on the right. Press ${SK_MOVE} to move up and down between the <b>white dots</b>. The enemy throws to one of them: get there, <b>clap</b>, then <b>catch</b>. No fakes here. Catch <b>8 in a row</b>, then throw it back with <b>Space</b>.` },
+  { world: 1, name: "Dodge!", icon: "🔴", title: "Level 3: Dodge!",
+    text: `Watch out for <b>dodgeballs</b>: red with a white outline. <b>Don't catch them, get out of their lane</b> with ${SK_MOVE}. Now there are 3 lanes. Survive the waves, then catch the normal ball, press <b>T</b> to turn it into a dodgeball and <b>Space</b> to throw it.` },
+  { world: 1, name: "Turn the Tables", icon: "🎯", title: "Level 4: Turn the Tables",
     text: "Now <b>you</b> have the ball. The enemy moves between 2 lanes to a rhythm. Aim at a lane with <b>A</b>/<b>D</b> and throw a dodgeball with <b>Space</b>. Time it so they're in that lane when it gets there. You have <b>3 balls</b>." },
-  { name: "Crossfire", icon: "⚔️", title: "Level 5: Crossfire",
-    text: "Two enemies, one on each side, both throwing dodgeballs at you. Keep dodging with <b>W</b>/<b>S</b>. Sometimes one throws a <b>normal ball</b>: clap and catch it. Then aim at one of the 4 enemy lanes with <b>A</b>/<b>D</b> and throw with <b>Space</b>. Hit both enemies to win." },
-  { name: "The Boss", icon: "👹", title: "Level 6: The Boss",
-    text: "The boss has your full power. Dodge waves of 1, 2, 3, then 4 dodgeballs across <b>5 lanes</b>. At the end, he throws normal balls in the only safe lane: <b>clap and catch</b> each one and it flies back as a dodgeball. Hit him <b>5 times</b> to win!" },
+  { world: 1, name: "Crossfire", icon: "⚔️", title: "Level 5: Crossfire",
+    text: `Two enemies, one on each side, both throwing dodgeballs at you. Keep dodging with ${SK_MOVE}. Sometimes one throws a <b>normal ball</b>: clap and catch it. Then aim at one of the enemy lanes with <b>A</b>/<b>D</b> and throw with <b>Space</b>. Hit both enemies to win.` },
+  { world: 1, name: "Quick Hands", icon: "✋", title: "Level 6: Quick Hands",
+    text: "The boss's guard has been training. Now there are <b>3 lanes</b> and the balls are faster. Clap and catch <b>10 in a row</b>, then throw it back with <b>Space</b>." },
+  { world: 1, name: "Dodge Storm", icon: "🌪️", title: "Level 7: Dodge Storm",
+    text: `<b>4 lanes</b> and up to <b>3 dodgeballs</b> at once. Find the safe lane with ${SK_MOVE}. Survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 1, name: "Moving Target", icon: "🏃", title: "Level 8: Moving Target",
+    text: "The guard moves between <b>3 lanes</b>, and faster. Aim with <b>A</b>/<b>D</b> and throw with <b>Space</b>. You have <b>3 balls</b> to hit them." },
+  { world: 1, name: "Twin Trouble", icon: "👯", title: "Level 9: Twin Trouble",
+    text: `The twins are back, and they've got faster. You have <b>4 lanes</b> to dodge in with ${SK_MOVE}. Catch their normal balls and hit both twins to reach the boss.` },
+  { world: 1, name: "The Boss", icon: "👹", title: "Level 10: The Boss",
+    text: "The boss has your full power. Dodge waves of 1, 2, 3, then 4 dodgeballs across <b>5 lanes</b>. At the end, he throws normal balls in the only safe lane: <b>clap and catch</b> each one and it flies back as a dodgeball. Hit him <b>5 times</b> to win! If he gets you, you start again from wave 1." },
+  // ---------------- World 2: the Shadow League
+  { world: 2, name: "New Rivals", icon: "🌒", title: "Level 11: New Rivals",
+    text: "With your power back, you find out the boss was only following orders from <b>the Captain</b> of the Shadow League. Their players want a game: beat <b>3 bots</b> (1 medium, 2 hard) in a normal game." },
+  { world: 2, name: "Shadow Lanes", icon: "🌑", title: "Level 12: Shadow Lanes",
+    text: "A Shadow League thrower blocks the way. <b>3 lanes</b>, faster balls. Clap and catch <b>12 in a row</b>, then throw it back." },
+  { world: 2, name: "Night Dodge", icon: "🌃", title: "Level 13: Night Dodge",
+    text: `<b>4 lanes</b> of fast dodgeballs. Move with ${SK_MOVE}, survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 2, name: "Slippery", icon: "🦎", title: "Level 14: Slippery",
+    text: "This one is quick: <b>3 lanes</b>, and they barely stop. Aim with <b>A</b>/<b>D</b> and throw with <b>Space</b>. <b>3 balls</b>." },
+  { world: 2, name: "Ambush", icon: "🪤", title: "Level 15: Ambush",
+    text: `The Shadow Twins attack from both sides. <b>4 lanes</b>, faster dodgeballs. Catch their normal balls and hit both twins.` },
+  { world: 2, name: "Rapid Fire", icon: "💨", title: "Level 16: Rapid Fire",
+    text: "<b>4 lanes</b> and the fastest balls yet. Clap and catch <b>12 in a row</b>, then throw it back." },
+  { world: 2, name: "Blackout Storm", icon: "⛈️", title: "Level 17: Blackout Storm",
+    text: `<b>5 lanes</b> and up to <b>4 dodgeballs</b> at once. Survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 2, name: "Sharpshooter", icon: "🏹", title: "Level 18: Sharpshooter",
+    text: "The Captain's guard moves between <b>4 lanes</b>. You have <b>4 balls</b> to hit them. Aim with <b>A</b>/<b>D</b>, throw with <b>Space</b>." },
+  { world: 2, name: "The Captain's Guard", icon: "🛡️", title: "Level 19: The Captain's Guard",
+    text: `The last two guards, from both sides, as fast as they get. <b>5 lanes</b> to dodge in. Hit both of them and the Captain has nowhere left to hide.` },
+  { world: 2, name: "The Captain", icon: "🦹", title: "Level 20: The Captain",
+    text: "The leader of the Shadow League. Dodge waves of up to <b>5 dodgeballs</b> across <b>6 lanes</b>. At the end, catch his normal balls to send them back. Hit him <b>7 times</b> to win! If he gets you, you start again from wave 1." },
 ];
+const STORY_W1 = 10, STORY_W2 = 20, STORY_VERSION = 2;
+const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"] };   // levels that are normal games against bots
 
 // limited packs: only in the shop while their event is on
 const LIMITED_PACKS = {

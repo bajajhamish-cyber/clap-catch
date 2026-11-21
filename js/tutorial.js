@@ -213,7 +213,7 @@ const TUT_SLIDES = [
   },
   {
     title: "📖 Story mode and 🤖 Bot Grind",
-    text: "On the <b>▶ Play</b> tab: <b>📖 Story</b> is 6 levels with moves you won't find anywhere else. Beat a level for the first time for <b>+20 points</b>, and beat the boss to unlock new packs. <b>🤖 Bot Grind</b> is just you against 2 bots, as often as you like: Easy +5, Medium +10, Hard +20, Super Hard +40 a win.",
+    text: "On the <b>Play</b> tab: <b>📖 Story</b> is 10 levels with moves you won't find anywhere else. Beat a level for the first time for <b>+20 points</b>, and beat the boss to unlock new packs. <b>🤖 Bot Grind</b> is just you against 2 bots, as often as you like: Easy +5, Medium +10, Hard +20, Super Hard +40 a win.",
     draw(c, t) {
       const f = (t % 3000) / 3000;
       [[80, "1"], [150, "2"], [220, "3"], [290, "4"], [360, "5"]].forEach(([x, n], i) => { c.fillStyle = f * 6 > i ? "#2e7dff" : "#2b2f3a"; c.fillRect(x - 25, 40, 50, 40); tText(c, n, x, 67, "#fff", 18); });
