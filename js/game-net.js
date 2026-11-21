@@ -353,7 +353,7 @@ function loop() {
   const showVote = !IS_RISK && Object.keys(players).length < 6 && players[me.id] && humanCount() >= 2;   // can't vote bots in alone
   vb.style.display = showVote ? "" : "none";
   if (showVote) { const mineV = !!players[me.id].botVote; const txt = `🤖 ${mineV ? "Voted" : "Vote"}: add bots (${bv.votes}/${bv.need})`; if (vb.textContent !== txt) vb.textContent = txt; vb.classList.toggle("secondary", mineV); }
-  $("removeBotsBtn").style.display = isHost() && Object.values(players).some(p => p.bot) && !IS_PUBLIC ? "" : "none";
+  $("removeBotsBtn").style.display = isHost() && Object.values(players).some(p => p.bot) && !IS_PUBLIC && !(S && (S.storyLevel || S.grind)) ? "" : "none";
   if (IS_RISK) { const host = isHost() && ball && ball.state === "lobby"; $("startBtn").style.display = host ? "" : "none"; if (host) $("startBtn").textContent = `Start (everyone pays ⭐ ${ball.stake})`; }
   else $("startBtn").style.display = IS_PUBLIC ? "none" : "";
   $("log").innerHTML = ((S && S.log) || []).slice(-6).reverse().map(l => `<div>${escHtml(l.m)}</div>`).join("");

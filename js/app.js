@@ -298,7 +298,7 @@ function renderStory() {
       <button type="button" data-story="${n}" ${open ? "" : "disabled"}>${cleared ? "Play again" : "Play"}</button></div>`;
   };
   const w1 = STORY_LEVELS.filter(L => L.world === 1), w2 = STORY_LEVELS.filter(L => L.world === 2);
-  let html = (paid.length && !done.length ? `<div class="warn">📖 Story mode got bigger: 10 levels now! Everyone starts again from level 1. You keep everything you unlocked, and levels you'd already beaten don't pay points twice.</div>` : "")
+  let html = (PROFILE.storyReset && !done.includes(STORY_W1) ? `<div class="warn">📖 Story mode got bigger: 10 levels now! Everyone starts again from level 1, and every level pays +20 again. The story packs are locked again until you beat the new boss, but anything you already got from them stays in your inventory.</div>` : "")
     + `<h3 class="worldHead">🌍 World 1: Get your power back</h3>` + w1.map(row).join("")
     + (PROFILE.storyUnlocked ? `<div class="muted small" style="margin:8px 0">👑 You beat the boss! The Titan Pack and 3 new skin packs are in your Shop.</div>` : "");
   if (PROFILE.world2) {
