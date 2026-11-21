@@ -85,7 +85,7 @@ function draw(pos0, t) {
     const r = CUBE * 0.9 + Math.sin(performance.now() / 120) * 3;
     ctx.strokeStyle = forced ? "#c77dff" : "#ff4d4d"; ctx.lineWidth = 3;
     for (let i = 0; i < 4; i++) { const ang = i * Math.PI / 2 + Math.PI / 4; ctx.beginPath(); ctx.arc(b.x, b.y, r, ang - 0.4, ang + 0.4); ctx.stroke(); }
-    if (forced) { ctx.fillStyle = "#c77dff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.fillText("FORCED", (a.x + b.x) / 2, (a.y + b.y) / 2 - 8); }
+    if (forced) { ctx.fillStyle = "#c77dff"; ctx.font = "bold 13px Nunito, system-ui"; ctx.textAlign = "center"; ctx.fillText("FORCED", (a.x + b.x) / 2, (a.y + b.y) / 2 - 8); }
   }
 
   // nuke target zone
@@ -114,7 +114,7 @@ function draw(pos0, t) {
         ctx.globalAlpha = 0.55 + 0.45 * holderCharge; ctx.fillStyle = chargeColor(holderCharge);
         ctx.fillRect(X, Y, C, C); ctx.globalAlpha = 1;
       }
-      if (ball && ball.bounty === id && !mirage) { ctx.font = "22px system-ui"; ctx.textAlign = "center"; ctx.fillText("💰", q.x + C / 2, q.y - C / 2 + 4); }
+      if (ball && ball.bounty === id && !mirage) { ctx.font = "22px Nunito, system-ui"; ctx.textAlign = "center"; ctx.fillText("💰", q.x + C / 2, q.y - C / 2 + 4); }
     }
     ctx.lineWidth = id === me.id ? 4 : 2; ctx.strokeStyle = id === me.id ? "#fff" : "rgba(255,255,255,0.25)";
     if (pickMode && pickValid(pickMode, id)) { ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 4; }
@@ -125,14 +125,14 @@ function draw(pos0, t) {
       ctx.beginPath(); ctx.moveTo(q.x - 14, q.y - 14); ctx.lineTo(q.x + 14, q.y + 14); ctx.moveTo(q.x + 14, q.y - 14); ctx.lineTo(q.x - 14, q.y + 14); ctx.stroke();
     }
 
-    ctx.fillStyle = p.out ? "#777" : "#fff"; ctx.font = "bold 15px system-ui"; ctx.textAlign = "center";
+    ctx.fillStyle = p.out ? "#777" : "#fff"; ctx.font = "bold 15px Nunito, system-ui"; ctx.textAlign = "center";
     if (!mirage) ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + C / 2 + 20);
     else if (id === me.id) ctx.fillText("(you)", q.x, q.y + C / 2 + 20);
 
     // sudden death: how long they've held the ball during the 30 seconds
     if (SD && roundRunning() && !p.out && !mirage) {
       const ms = sdHeld(id, t), lead = sdLeader(t) === id && ms > 0;
-      ctx.font = "bold 14px system-ui"; ctx.textAlign = "left"; ctx.fillStyle = lead ? "#ff5252" : "#ffcc80";
+      ctx.font = "bold 14px Nunito, system-ui"; ctx.textAlign = "left"; ctx.fillStyle = lead ? "#ff5252" : "#ffcc80";
       ctx.fillText(`⏱️ ${(ms / 1000).toFixed(1)}s`, q.x + C / 2 + 8, q.y + 5); ctx.textAlign = "center";
     }
 
@@ -158,7 +158,7 @@ function draw(pos0, t) {
     if (!p.out && gr && !gr.giant) tags.push("🙌 wide grip");
     if (p.out && id === me.id && canUse("vengeance") === "") tags.push("🗡️ VENGEANCE ready!");
     if (mirage) tags = [];
-    if (tags.length) { ctx.font = "12px system-ui"; ctx.fillStyle = "#c9b8ff"; ctx.fillText(tags.join("  "), q.x, q.y + CUBE / 2 + 36); }
+    if (tags.length) { ctx.font = "12px Nunito, system-ui"; ctx.fillStyle = "#c9b8ff"; ctx.fillText(tags.join("  "), q.x, q.y + CUBE / 2 + 36); }
 
     // empty bar outline = "they've got it and can throw"
     if (isHolder && !p.out && !(ball.lockUntil && t < ball.lockUntil)) {
@@ -168,7 +168,7 @@ function draw(pos0, t) {
     if (isHolder && ball && !ball.nullified) {
       const doom = doomOf(id);
       if (doom) {
-        ctx.font = "bold 13px system-ui"; ctx.fillStyle = "#ff8a80";
+        ctx.font = "bold 13px Nunito, system-ui"; ctx.fillStyle = "#ff8a80";
         ctx.fillText(`⛓️ WARD or FULL COUNTER! ${Math.max(0, (DF_GRACE_MS - (t - doom.start)) / 1000).toFixed(1)}s`, q.x, q.y - CUBE / 2 - 46);
       }
     }
@@ -181,13 +181,13 @@ function draw(pos0, t) {
     // hot potato timer
     if (isHolder && hasRule("hotPotato") && ball.heldSince) {
       const left = Math.max(0, (HOT_POTATO_MS - (t - ball.heldSince)) / 1000);
-      ctx.fillStyle = "#ffb74d"; ctx.font = "bold 14px system-ui"; ctx.fillText(`🥔 ${left.toFixed(1)}s`, q.x, q.y - CUBE / 2 - 30);
+      ctx.fillStyle = "#ffb74d"; ctx.font = "bold 14px Nunito, system-ui"; ctx.fillText(`🥔 ${left.toFixed(1)}s`, q.x, q.y - CUBE / 2 - 30);
     }
 
     const cf = clapFx[id];
     if (cf && performance.now() - cf < 500) {
       const k = (performance.now() - cf) / 500;
-      ctx.globalAlpha = 1 - k; ctx.font = `${26 + k * 12}px system-ui`;
+      ctx.globalAlpha = 1 - k; ctx.font = `${26 + k * 12}px Nunito, system-ui`;
       ctx.fillText("👏", q.x + 30, q.y - CUBE / 2 - 10 - k * 20);
       ctx.globalAlpha = 1;
     }
@@ -223,7 +223,7 @@ function draw(pos0, t) {
       if (ball.to === me.id && p >= myCatchFrom() && !ghostHide) {
         ctx.strokeStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(b.x, b.y, CUBE, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.font = "bold 18px system-ui"; ctx.textAlign = "center";
+        ctx.fillStyle = fire ? "#ff5722" : "#ffeb3b"; ctx.font = "bold 18px Nunito, system-ui"; ctx.textAlign = "center";
         ctx.fillText(fire ? "🔥 DON'T CATCH!" : "SPACE!", b.x, b.y - CUBE - 8);
       }
     } else if (ball.state === "rush" && pos[ball.by] && (now() - ball.t0) / ball.dur > 0.5) {
@@ -255,18 +255,18 @@ function draw(pos0, t) {
     ctx.drawImage(dk, 0, 0);
   }
   // banners
-  if (EVENT_ID && EVENTS[EVENT_ID]) { ctx.font = "bold 14px system-ui"; ctx.textAlign = "left"; ctx.fillStyle = golden ? "#ffd54f" : "#c9b8ff"; ctx.fillText(`${EVENTS[EVENT_ID].icon} ${EVENTS[EVENT_ID].name}`, 14, 24); }
-  if (ball && ball.jackpot && roundRunning()) { ctx.font = "bold 15px system-ui"; ctx.textAlign = "right"; ctx.fillStyle = `hsl(${(performance.now() / 4) % 360},90%,65%)`; ctx.fillText("🌈 JACKPOT GAME: win for a free legendary!", 946, 24); }
-  if (fxOn("flash") && fx.flash.by !== me.id && now() < fx.flash.at) { ctx.font = "bold 34px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#fff176"; ctx.fillText("⚡ FLASH INCOMING ⚡", 480, 200); }
+  if (EVENT_ID && EVENTS[EVENT_ID]) { ctx.font = "bold 14px Nunito, system-ui"; ctx.textAlign = "left"; ctx.fillStyle = golden ? "#ffd54f" : "#c9b8ff"; ctx.fillText(`${EVENTS[EVENT_ID].icon} ${EVENTS[EVENT_ID].name}`, 14, 24); }
+  if (ball && ball.jackpot && roundRunning()) { ctx.font = "bold 15px Nunito, system-ui"; ctx.textAlign = "right"; ctx.fillStyle = `hsl(${(performance.now() / 4) % 360},90%,65%)`; ctx.fillText("🌈 JACKPOT GAME: win for a free legendary!", 946, 24); }
+  if (fxOn("flash") && fx.flash.by !== me.id && now() < fx.flash.at) { ctx.font = "bold 34px Nunito, system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#fff176"; ctx.fillText("⚡ FLASH INCOMING ⚡", 480, 200); }
   if (roundRunning() && aliveIds().length === 2) {
     const next = Math.max(MIN_FLIGHT, FLIGHT_TIME * Math.pow(DUEL_SPEEDUP, (ball.duel || 0) + 1));
-    ctx.font = "bold 16px system-ui"; ctx.fillStyle = "#ffd54f"; ctx.textAlign = "center";
+    ctx.font = "bold 16px Nunito, system-ui"; ctx.fillStyle = "#ffd54f"; ctx.textAlign = "center";
     ctx.fillText(`⚡ Final two! Ball speed ×${(FLIGHT_TIME / next).toFixed(1)}`, 480, 82);
   }
   ctx.textAlign = "center";
-  if (ball && ball.nullified && roundRunning()) { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#ff8a80"; ctx.fillText("⛔ FULL COUNTER: no abilities this turn", 480, 30); }
-  if (pickMode) { ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText(`${RULES[pickMode].icon} Click ${TARGET_ABILITIES[pickMode]} (Esc to cancel)`, 480, 56); }
-  if (performance.now() < flash.until) { ctx.font = "bold 16px system-ui"; ctx.fillStyle = "#ffd54f"; ctx.fillText(flash.msg, 480, 620); }
+  if (ball && ball.nullified && roundRunning()) { ctx.font = "bold 18px Nunito, system-ui"; ctx.fillStyle = "#ff8a80"; ctx.fillText("⛔ FULL COUNTER: no abilities this turn", 480, 30); }
+  if (pickMode) { ctx.font = "bold 18px Nunito, system-ui"; ctx.fillStyle = "#c77dff"; ctx.fillText(`${RULES[pickMode].icon} Click ${TARGET_ABILITIES[pickMode]} (Esc to cancel)`, 480, 56); }
+  if (performance.now() < flash.until) { ctx.font = "bold 16px Nunito, system-ui"; ctx.fillStyle = "#ffd54f"; ctx.fillText(flash.msg, 480, 620); }
 
   // ability buttons, bottom left
   const abil = abilitiesOf(me.id), mine0 = players[me.id] || {};
@@ -276,17 +276,17 @@ function draw(pos0, t) {
     ctx.globalAlpha = ready ? 1 : 0.35;
     ctx.fillStyle = "#262a35"; ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = ready ? "#7ee787" : "#3a3f4e"; ctx.lineWidth = ready ? 3 : 2; ctx.strokeRect(x, y, w, h);
-    ctx.font = "28px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "28px Nunito, system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(RULES[id].icon, x + w / 2, y + h / 2 + 2);
     ctx.fillStyle = "#fff"; ctx.fillRect(x - 6, y - 8, 20, 20);
-    ctx.fillStyle = "#14161c"; ctx.font = "bold 13px system-ui"; { const kn = keyName(abilityKey(i)); ctx.font = `bold ${kn.length > 2 ? 9 : 13}px system-ui`; ctx.fillText(kn.length > 5 ? kn.slice(0, 5) : kn, x + 4, y + 2); }
-    ctx.fillStyle = "#fff"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "right"; ctx.fillText("×" + left, x + w - 4, y + h - 9);
+    ctx.fillStyle = "#14161c"; ctx.font = "bold 13px Nunito, system-ui"; { const kn = keyName(abilityKey(i)); ctx.font = `bold ${kn.length > 2 ? 9 : 13}px Nunito, system-ui`; ctx.fillText(kn.length > 5 ? kn.slice(0, 5) : kn, x + 4, y + 2); }
+    ctx.fillStyle = "#fff"; ctx.font = "bold 12px Nunito, system-ui"; ctx.textAlign = "right"; ctx.fillText("×" + left, x + w - 4, y + h - 9);
     ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1;
   });
   ctx.textAlign = "center";
 
   // centre status
-  ctx.font = "bold 20px system-ui"; ctx.fillStyle = "#cfd3e0";
+  ctx.font = "bold 20px Nunito, system-ui"; ctx.fillStyle = "#cfd3e0";
   let msg = "";
   const mine = players[me.id];
   if (IS_RISK && ball && ball.state === "lobby") {
@@ -321,9 +321,9 @@ function draw(pos0, t) {
   ctx.fillText(msg, 480, 330);
   if (SD && roundRunning() && ball.state !== "wheel") {
     const left = Math.max(0, (SD.endsAt - t) / 1000);
-    ctx.font = "bold 24px system-ui"; ctx.fillStyle = left < 10 ? "#ff5252" : "#ffb74d";
+    ctx.font = "bold 24px Nunito, system-ui"; ctx.fillStyle = left < 10 ? "#ff5252" : "#ffb74d";
     ctx.fillText(`⏱️ ${left.toFixed(1)}s`, 480, 262);
-    ctx.font = "bold 14px system-ui"; ctx.fillStyle = "#ffcc80";
+    ctx.font = "bold 14px Nunito, system-ui"; ctx.fillStyle = "#ffcc80";
     ctx.fillText("Unless someone gets out, whoever holds the ball the longest is OUT", 480, 288);
   }
   if (ball && ball.state === "wheel") drawWheel();      // Devil's Deal: covers everything while it spins
@@ -350,11 +350,11 @@ function drawWheel() {
   for (let i = 0; i < slices; i++) {
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, ang + i * Math.PI * 2 / slices, ang + (i + 1) * Math.PI * 2 / slices); ctx.closePath();
     ctx.fillStyle = i === 0 ? "#c62828" : (i % 2 ? "#333" : "#444"); ctx.fill(); ctx.strokeStyle = "#111"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang + (i + 0.5) * Math.PI * 2 / slices); ctx.fillStyle = "#fff"; ctx.font = "bold 13px system-ui"; ctx.textAlign = "right";
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang + (i + 0.5) * Math.PI * 2 / slices); ctx.fillStyle = "#fff"; ctx.font = "bold 13px Nunito, system-ui"; ctx.textAlign = "right";
     ctx.fillText(i === 0 ? "😈 STEAL" : "nope", r - 10, 5); ctx.restore();
   }
   ctx.fillStyle = "#ffeb3b"; ctx.beginPath(); ctx.moveTo(cx - 14, cy - r - 22); ctx.lineTo(cx + 14, cy - r - 22); ctx.lineTo(cx, cy - r + 4); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.font = "bold 22px system-ui"; ctx.textAlign = "center";
+  ctx.fillStyle = "#fff"; ctx.font = "bold 22px Nunito, system-ui"; ctx.textAlign = "center";
   ctx.fillText(`🎡 DEVIL'S DEAL: ${nm(b.by)} paid ${nm(b.target)} 500 points`, cx, 80);
   if (k >= 1 || now() > b.t0 + b.dur - 300) ctx.fillText(b.win ? `😈 STOLEN: ${RULES[b.prize] ? RULES[b.prize].icon + " " + RULES[b.prize].name : ""}!` : "No luck this time", cx, cy + r + 50);
   else ctx.fillText("10% chance to steal their rarest ability forever…", cx, cy + r + 50);

@@ -71,7 +71,7 @@ function drawStory(t) {
   const g = c.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, "#151821"); g.addColorStop(1, "#1d2230"); c.fillStyle = g; c.fillRect(0, 0, 960, 640);
   c.strokeStyle = "#2a3040"; c.setLineDash([8, 12]); c.lineWidth = 2; c.beginPath(); c.moveTo(480, 60); c.lineTo(480, 600); c.stroke(); c.setLineDash([]);
   const L = STORY_LEVELS[st.level - 1];
-  c.font = "bold 18px system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} Level ${st.level}: ${L.name}`, 16, 30);
+  c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} Level ${st.level}: ${L.name}`, 16, 30);
   // lanes (the white dots)
   const dots = (x, ys) => ys.forEach(y => { c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y + CUBE / 2 + 12, 4, 0, Math.PI * 2); c.fill(); });
   dots(st.you.x, st.you.lanes);
@@ -92,7 +92,7 @@ function drawStory(t) {
     c.fillStyle = "#e53935"; c.fillRect(e.x - CUBE / 2, y - CUBE / 2, CUBE, CUBE);
     c.fillStyle = "#fff"; c.fillRect(e.x - 12, y - 8, 7, 7); c.fillRect(e.x + 5, y - 8, 7, 7);
     c.fillStyle = "#111"; c.fillRect(e.x - 14, y - 14, 10, 3); c.fillRect(e.x + 4, y - 14, 10, 3);
-    c.font = "bold 14px system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText(e.alive ? e.name : "💫 " + e.name, e.x, y + CUBE / 2 + 34);
+    c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText(e.alive ? e.name : "💫 " + e.name, e.x, y + CUBE / 2 + 34);
     c.globalAlpha = 1;
   });
   // you
@@ -100,8 +100,8 @@ function drawStory(t) {
   c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(st.you.x - CUBE / 2 + 4, yy - CUBE / 2 + 6, CUBE, CUBE);
   drawSkin(c, me2.skin || "default", st.you.x - CUBE / 2, yy - CUBE / 2, CUBE, me2.color || "#4fc3f7", performance.now());
   c.lineWidth = 4; c.strokeStyle = "#fff"; c.strokeRect(st.you.x - CUBE / 2, yy - CUBE / 2, CUBE, CUBE);
-  c.font = "bold 14px system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("You", st.you.x, yy + CUBE / 2 + 34);
-  if (performance.now() - storyClapAt < 250) { c.font = "26px system-ui"; c.fillText("👏", st.you.x + 34, yy - 28); }
+  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("You", st.you.x, yy + CUBE / 2 + 34);
+  if (performance.now() - storyClapAt < 250) { c.font = "26px Nunito, system-ui"; c.fillText("👏", st.you.x + 34, yy - 28); }
   if (st.holding) {
     c.save(); c.translate(st.you.x + (st.you.side === "R" ? -36 : 36), yy - 6); c.rotate(performance.now() / 300);
     ballShape(c, st.dodgeMode ? "dodge" : "normal", 20); c.restore();
@@ -119,12 +119,12 @@ function drawStory(t) {
   });
   if (coming && coming.p >= 0.6) {
     c.strokeStyle = "#2ecc40"; c.lineWidth = 4; c.beginPath(); c.arc(st.you.x, yy, 40, 0, Math.PI * 2); c.stroke();
-    c.font = "bold 16px system-ui"; c.textAlign = "center"; c.fillStyle = "#2ecc40"; c.fillText("SPACE!", st.you.x, yy - 50);
+    c.font = "bold 16px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#2ecc40"; c.fillText("SPACE!", st.you.x, yy - 50);
   }
   // speech bubble
   if (st.say && st.say.text) {
     const e = st.enemies[st.say.who] || st.enemies[0], bx = Math.min(800, Math.max(160, e.x)), by = e.boss ? 120 : e.lanes[e.row] - 70;
-    c.font = "bold 16px system-ui"; const w = c.measureText(st.say.text).width + 30;
+    c.font = "bold 16px Nunito, system-ui"; const w = c.measureText(st.say.text).width + 30;
     c.fillStyle = "#fff"; c.beginPath(); c.roundRect(bx - w / 2, by - 30, w, 40, 10); c.fill();
     c.beginPath(); c.moveTo(bx - 8, by + 10); c.lineTo(bx + 8, by + 10); c.lineTo(bx, by + 22); c.fill();
     c.fillStyle = "#111"; c.textAlign = "center"; c.fillText(st.say.text, bx, by - 4);
@@ -136,8 +136,8 @@ function drawStory(t) {
   if (st.level === 4) { info = `Balls left: ${3 - st.thrown}`; hint = `${keyName(KEYS.left)}/${keyName(KEYS.right)} to aim at a lane · ${keyName(KEYS.throw)} to throw. Time it!`; }
   if (st.level === 5) { info = `Enemies left: ${st.enemies.filter(e => e.alive).length}`; hint = st.holding ? `${keyName(KEYS.left)}/${keyName(KEYS.right)} aim at one of the 4 enemy lanes · ${keyName(KEYS.throw)} throw · keep dodging!` : "Dodge the red ones. Catch the white one!"; }
   if (st.level === 6) { const w = st.wave || 0; info = w <= 20 ? `Wave ${Math.min(20, w)} / 20` : "Final attack: catch the white ball!"; hint = "Dodge red · clap and catch white"; }
-  c.font = "bold 16px system-ui"; c.textAlign = "left"; c.fillStyle = "#ffd54f"; c.fillText(info, 16, 56);
-  c.textAlign = "center"; c.fillStyle = "#cfd3e0"; c.font = "15px system-ui"; c.fillText(hint, 480, 625);
+  c.font = "bold 16px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#ffd54f"; c.fillText(info, 16, 56);
+  c.textAlign = "center"; c.fillStyle = "#cfd3e0"; c.font = "15px Nunito, system-ui"; c.fillText(hint, 480, 625);
 }
 function ballShape(c, kind, s) {
   if (kind === "dodge") { c.fillStyle = "#e53935"; c.strokeStyle = "#fff"; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, s / 2, 0, Math.PI * 2); c.fill(); c.stroke(); }
@@ -159,5 +159,5 @@ function drawBoss(c, e, t) {
   // health bar
   c.fillStyle = "#111"; c.fillRect(x - 100, 40, 200, 22);
   for (let i = 0; i < 5; i++) { c.fillStyle = i < e.hp ? "#e53935" : "#3a3d46"; c.fillRect(x - 96 + i * 39.2, 44, 36, 14); }
-  c.font = "bold 14px system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("👹 THE BOSS", x, 34);
+  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("👹 THE BOSS", x, 34);
 }

@@ -8,7 +8,7 @@ function tCube(c, x, y, col, label, s = 40, skin) {
   c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(x - s / 2 + 3, y - s / 2 + 4, s, s);
   if (skin) drawSkin(c, skin, x - s / 2, y - s / 2, s, col, performance.now());
   else { c.fillStyle = col; c.fillRect(x - s / 2, y - s / 2, s, s); }
-  if (label) { c.fillStyle = "#fff"; c.font = "bold 13px system-ui"; c.textAlign = "center"; c.fillText(label, x, y + s / 2 + 16); }
+  if (label) { c.fillStyle = "#fff"; c.font = "bold 13px Nunito, system-ui"; c.textAlign = "center"; c.fillText(label, x, y + s / 2 + 16); }
 }
 function tBall(c, x, y, s = 12, fire) {
   c.save(); c.translate(x, y); c.rotate(performance.now() / 150);
@@ -23,7 +23,7 @@ function tLine(c, a, b, col) {
   c.strokeStyle = col; c.lineWidth = 3; c.setLineDash([10, 7]); c.lineDashOffset = -performance.now() / 30;
   c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); c.setLineDash([]);
 }
-function tText(c, txt, x, y, col = "#cfd3e0", size = 16) { c.fillStyle = col; c.font = `bold ${size}px system-ui`; c.textAlign = "center"; c.fillText(txt, x, y); }
+function tText(c, txt, x, y, col = "#cfd3e0", size = 16) { c.fillStyle = col; c.font = `bold ${size}px Nunito, system-ui`; c.textAlign = "center"; c.fillText(txt, x, y); }
 function tX(c, x, y) { c.strokeStyle = "#ff5252"; c.lineWidth = 4; c.beginPath(); c.moveTo(x - 12, y - 12); c.lineTo(x + 12, y + 12); c.moveTo(x + 12, y - 12); c.lineTo(x - 12, y + 12); c.stroke(); }
 const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k));
 

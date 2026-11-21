@@ -96,7 +96,7 @@ function renderAll() {
   el("pointsLbl").textContent = "⭐ " + PROFILE.points + " points";
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
   renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests();
-  el("friendBadge").textContent = PROFILE.friendIn ? `(${PROFILE.friendIn})` : "";
+  friendBadge(PROFILE.friendIn || 0, PROFILE.dmUnread || 0);
   showNotices();
 }
 // ---------------------------------------------------------------- messages (e.g. board results)
@@ -120,7 +120,7 @@ function gameLabel(g) {
 }
 function renderFriends() {
   const d = friendData;
-  el("friendBadge").textContent = d.incoming.length ? `(${d.incoming.length})` : "";
+  friendBadge(d.incoming.length, d.friends.reduce((n, f) => n + (f.unread || 0), 0));
   el("friendInCard").hidden = !d.incoming.length;
   el("friendIn").innerHTML = d.incoming.map(f => `<div class="tradeItem"><div>👋 <b>${esc(f.username)}</b> wants to be friends</div>
     <div class="row"><button type="button" data-fr-yes="${esc(f.uid)}">Accept</button><button type="button" class="secondary" data-fr-no="${esc(f.uid)}">Decline</button></div></div>`).join("");
@@ -133,6 +133,7 @@ function renderFriends() {
     return `<div class="tradeItem"><div><span class="dot ${f.game ? "ingame" : f.online ? "on" : ""}"></span><b>${esc(f.username)}</b>
       <span class="muted small">${f.game ? gameLabel(f.game) : f.online ? "online" : "offline"}</span></div>
       <div class="row">${f.game ? `<button type="button" data-fr-join="${esc(f.uid)}" ${canJoin ? "" : "disabled"}>${canJoin ? "Join" : "Can't join"}</button>` : ""}
+      <button type="button" class="secondary small" data-fr-chat="${esc(f.uid)}" data-name="${esc(f.username)}">💬 Chat${f.unread ? ` <span class="unread">${f.unread}</span>` : ""}</button>
       <button type="button" class="ghost small" data-fr-remove="${esc(f.uid)}" data-name="${esc(f.username)}">Remove</button></div></div>`;
   }).join("") : "<div class='muted'>No friends yet. Add someone by their username!</div>";
   const act = (op, args, msg) => api(op, args).then(() => { if (msg) toast(msg); refreshFriends(); }).catch(e => toast(e.message, true));
@@ -140,8 +141,45 @@ function renderFriends() {
   document.querySelectorAll("[data-fr-no]").forEach(b => b.onclick = () => act("friendAnswer", { uid: b.dataset.frNo, accept: false }));
   document.querySelectorAll("[data-fr-cancel]").forEach(b => b.onclick = () => act("friendCancel", { uid: b.dataset.frCancel }));
   document.querySelectorAll("[data-fr-remove]").forEach(b => b.onclick = () => { if (confirm(`Remove ${b.dataset.name} from your friends?`)) act("friendRemove", { uid: b.dataset.frRemove }, "Removed"); });
+  document.querySelectorAll("[data-fr-chat]").forEach(b => b.onclick = () => openDm(b.dataset.frChat, b.dataset.name));
   document.querySelectorAll("[data-fr-join]").forEach(b => b.onclick = () => enterRoom(async () => (await api("joinFriend", { uid: b.dataset.frJoin })).key));
 }
+function friendBadge(requests, unread) {
+  el("friendBadge").textContent = requests + unread ? `(${requests + unread})` : "";
+}
+// chatting with a friend: the server keeps the last 10 messages between you two
+let dmWith = null, dmTimer = null, dmLastSig = "";
+async function openDm(uid, name) {
+  dmWith = uid; dmLastSig = "";
+  el("dmTitle").textContent = "💬 " + name;
+  el("dmList").innerHTML = "<div class='muted small'>Loading…</div>";
+  el("dmModal").style.display = "flex"; el("dmInput").value = ""; el("dmInput").focus();
+  await loadDm();
+  const f = friendData.friends.find(x => x.uid === uid); if (f && f.unread) { f.unread = 0; renderFriends(); }
+  clearInterval(dmTimer); dmTimer = setInterval(() => { if (!document.hidden) loadDm(); }, 4000);
+}
+function closeDm() { dmWith = null; clearInterval(dmTimer); el("dmModal").style.display = "none"; refreshFriends(); }
+async function loadDm(data) {
+  const who = dmWith; if (!who) return;
+  try {
+    const d = data || await api("dmGet", { with: who });
+    if (who !== dmWith) return;
+    const sig = JSON.stringify(d.msgs); if (sig === dmLastSig) return; dmLastSig = sig;
+    const box = el("dmList");
+    box.innerHTML = d.msgs.length ? d.msgs.map(m => `<div class="dm ${m.f === PROFILE.uid ? "mine" : ""}"><div>${esc(m.m)}</div><span>${new Date(m.t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span></div>`).join("")
+      : "<div class='muted small'>No messages yet. Say hi! 👋</div>";
+    box.scrollTop = box.scrollHeight;
+  } catch (e) { toast(e.message, true); closeDm(); }
+}
+async function sendDm() {
+  const text = el("dmInput").value.trim(); if (!text || !dmWith) return;
+  el("dmInput").value = "";
+  try { await loadDm(await api("dmSend", { with: dmWith, text })); }
+  catch (e) { toast(e.message, true); el("dmInput").value = text; }
+}
+el("dmSend").onclick = sendDm;
+el("dmInput").onkeydown = e => { if (e.key === "Enter") sendDm(); if (e.key === "Escape") closeDm(); };
+el("dmClose").onclick = closeDm;
 el("friendAddBtn").onclick = async () => {
   const u = el("friendUser").value.trim(); if (!u) return;
   try { const r = await api("friendRequest", { username: u }); toast(r.friends ? `You and ${u} are now friends! 🎉` : `Request sent to ${u}`); el("friendUser").value = ""; refreshFriends(); }
