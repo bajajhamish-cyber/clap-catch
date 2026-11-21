@@ -7,7 +7,7 @@ const canvas = $("c"), ctx = canvas.getContext("2d");
 const COLORS = ["#4fc3f7", "#ffb74d", "#ba68c8", "#4db6ac", "#f06292", "#aed581", "#ffd54f", "#7986cb", "#e57373", "#90a4ae"];
 
 // ---------------------------------------------------------------- what the server last told us
-let S = null, players = {}, ball = null, rules = {}, doubles = {}, fx = {}, EVENT_ID = null, TURN = 0;
+let SD = null, S = null, players = {}, ball = null, rules = {}, doubles = {}, fx = {}, EVENT_ID = null, TURN = 0;
 // abilities where you click a player after pressing the key
 const TARGET_ABILITIES = { counterForce: "who they must throw to", neutralise: "who to Neutralise (costs you 5 points)",
   heavenlyWrath: "who gets Heavenly Wrath (you give them 5 points)", devilsDeal: "who to make a Devil's Deal with (you pay them 500 points)" };
@@ -61,7 +61,7 @@ function joinGame(key) {
 }
 function applyState(st) {
   S = st; players = st.players || {}; ball = st.ball; rules = st.rules || {}; doubles = st.doubles || {};
-  fx = st.fx || {}; EVENT_ID = st.event || null; TURN = st.turn || 0;
+  fx = st.fx || {}; EVENT_ID = st.event || null; TURN = st.turn || 0; SD = st.sd || null;
   if (fx.clone && fx.clone.look) players = Object.assign({}, players, { [fx.clone.id]: fx.clone.look });   // the clone looks exactly like a player
   effectSounds();
   MODE = st.mode; IS_PUBLIC = st.isPublic; IS_RISK = st.isRisk;

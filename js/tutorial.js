@@ -80,7 +80,7 @@ const TUT_SLIDES = [
   },
   {
     title: "❌ How you get out",
-    text: "You're out if you: <b>clap when it isn't coming to you</b>, <b>catch without clapping</b>, or <b>don't catch it</b> in time. You can also press <kbd>G</kbd><kbd>G</kbd><kbd>G</kbd> to take yourself out.",
+    text: "You're out if you: <b>clap when it isn't coming to you</b>, <b>catch without clapping</b>, or <b>don't catch it</b> in time. You can also press <kbd>G</kbd><kbd>G</kbd><kbd>G</kbd> to take yourself out. If nobody gets out for <b>2 minutes</b>, a 30 second timer starts: unless someone gets out, whoever holds the ball the longest is out, so don't hog it!",
     draw(c, t) {
       const show = Math.floor(t / 700);
       [["👏 on a fake", 90], ["catch, no clap", 240], ["dropped it", 390]].forEach(([label, x], i) => {

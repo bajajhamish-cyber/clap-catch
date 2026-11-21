@@ -129,6 +129,13 @@ function draw(pos0, t) {
     if (!mirage) ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + C / 2 + 20);
     else if (id === me.id) ctx.fillText("(you)", q.x, q.y + C / 2 + 20);
 
+    // sudden death: how long they've held the ball during the 30 seconds
+    if (SD && roundRunning() && !p.out && !mirage) {
+      const ms = sdHeld(id, t), lead = sdLeader(t) === id && ms > 0;
+      ctx.font = "bold 14px system-ui"; ctx.textAlign = "left"; ctx.fillStyle = lead ? "#ff5252" : "#ffcc80";
+      ctx.fillText(`⏱️ ${(ms / 1000).toFixed(1)}s`, q.x + C / 2 + 8, q.y + 5); ctx.textAlign = "center";
+    }
+
     // status icons under name
     let tags = [];
     const d = doubles[id] || {};
@@ -312,8 +319,25 @@ function draw(pos0, t) {
   else if (ball.state === "held" && !ball.nullified && (doubles[ball.holder] || {})[me.id]) msg = `G G G to sacrifice and take ${nm(ball.holder)} out with you`;
   else msg = "Watch the thrower… B = clap, SPACE = catch";
   ctx.fillText(msg, 480, 330);
+  if (SD && roundRunning() && ball.state !== "wheel") {
+    const left = Math.max(0, (SD.endsAt - t) / 1000);
+    ctx.font = "bold 24px system-ui"; ctx.fillStyle = left < 10 ? "#ff5252" : "#ffb74d";
+    ctx.fillText(`⏱️ ${left.toFixed(1)}s`, 480, 262);
+    ctx.font = "bold 14px system-ui"; ctx.fillStyle = "#ffcc80";
+    ctx.fillText("Unless someone gets out, whoever holds the ball the longest is OUT", 480, 288);
+  }
   if (ball && ball.state === "wheel") drawWheel();      // Devil's Deal: covers everything while it spins
   ctx.restore();
+}
+// sudden death: time held so far (counts up live for whoever has the ball now)
+function sdHeld(id, t) {
+  if (!SD) return 0;
+  return (SD.held[id] || 0) + (SD.holder === id ? Math.max(0, Math.min(t, SD.endsAt) - SD.since) : 0);
+}
+function sdLeader(t) {
+  let best = null, bm = -1;
+  Object.keys(players).forEach(id => { if (players[id].out) return; const m = sdHeld(id, t); if (m > bm) { bm = m; best = id; } });
+  return best;
 }
 function drawWheel() {
   const b = ball, k = Math.min(1, Math.max(0, (now() - b.t0) / b.dur));
