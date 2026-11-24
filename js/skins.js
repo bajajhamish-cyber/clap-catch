@@ -151,3 +151,19 @@ function drawSkin(c, id, x, y, s, base, t) {
   const sk = SKINS[id] || SKINS.default;
   try { sk.draw(c, x, y, s, base, t || 0); } catch (e) { _fill(c, x, y, s, base || "#4fc3f7"); }
 }
+
+// ---- Creator Pack skins: pictures uploaded by the admin (only after the update is switched on)
+let CREATOR = null, CREATOR_IMG = {}, creatorLoading = null;
+function loadCreatorSkins() {
+  if (CREATOR) return Promise.resolve(CREATOR);
+  if (!creatorLoading) creatorLoading = api("creatorSkins").then(d => {
+    CREATOR = d || {};
+    Object.entries(CREATOR).forEach(([id, sk]) => {
+      const im = new Image(); im.src = sk.img; CREATOR_IMG[id] = im;
+      SKINS[id] = { name: sk.name, rarity: skinRarity(id), pack: "creator",
+        draw: (c, x, y, s, base) => { const i = CREATOR_IMG[id]; if (i && i.complete && i.naturalWidth) c.drawImage(i, x, y, s, s); else _fill(c, x, y, s, base || "#4fc3f7"); } };
+    });
+    return CREATOR;
+  }).catch(() => { CREATOR = null; return null; }).finally(() => { creatorLoading = null; });
+  return creatorLoading;
+}

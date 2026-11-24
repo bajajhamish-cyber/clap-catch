@@ -16,7 +16,7 @@ function toast(msg, bad) {
   clearTimeout(toast._t); toast._t = setTimeout(() => t.className = "", 2800);
 }
 function showScreen(name) { ["authScreen", "menuScreen", "game", "banScreen"].forEach(id => el(id).hidden = id !== name); }
-function setProfile(p) { if (!p) return; PROFILE = p; if (!checkBan()) renderAll(); }
+function setProfile(p) { if (!p) return; PROFILE = p; if (p.update3 && typeof setU3 === "function") setU3(true); if (!checkBan()) renderAll(); }
 function onPoints(points) { if (PROFILE) { PROFILE.points = points; el("gamePoints").textContent = "⭐ " + points; } }
 
 // ---------------------------------------------------------------- login / sign up
@@ -33,6 +33,7 @@ async function doAuth(signup) {
   const u = el("authUser").value.trim(), p = el("authPass").value;
   el("authErr").textContent = "";
   if (!USERNAME_RE.test(u)) { el("authErr").textContent = "Username: 3-16 letters, numbers or _"; return; }
+  if (signup && typeof U3 !== "undefined" && U3 && badName(u)) { el("authErr").textContent = "That username isn't allowed. Pick another one."; return; }
   if (p.length < 6) { el("authErr").textContent = "Password needs at least 6 characters."; return; }
   el("loginBtn").disabled = el("signupBtn").disabled = true;
   try {
@@ -89,6 +90,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   if (currentTab === "friends") refreshFriends();
   if (currentTab === "board") refreshBoard();
   if (currentTab === "quests") api("me").then(setProfile).catch(() => {});
+  if (currentTab === "weekly" && typeof refreshWeekly === "function") refreshWeekly();
 });
 function renderAll() {
   if (!PROFILE) return;
@@ -96,6 +98,7 @@ function renderAll() {
   el("pointsLbl").textContent = "⭐ " + PROFILE.points + " points";
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
   renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests();
+  if (PROFILE.update3 && typeof renderU3 === "function") renderU3();
   friendBadge(PROFILE.friendIn || 0, PROFILE.dmUnread || 0);
   showNotices();
 }
@@ -305,6 +308,7 @@ function renderStory() {
     html += `<h3 class="worldHead">🌒 World 2: The Shadow League</h3>`
       + (done.includes(STORY_W1) ? w2.map((L, i) => row(L, i + STORY_W1)).join("") : `<div class="muted small">🔒 Beat the World 1 boss (level 10) to open World 2.</div>`)
       + (PROFILE.story2Unlocked ? `<div class="muted small" style="margin-top:8px">🦹 You beat the Captain! The Shadow Pack is in your Shop and you get 2 extra daily quests.</div>` : "");
+    if (PROFILE.update3 && typeof storyW3Html === "function") html += storyW3Html(row);
   }
   el("storyLevels").innerHTML = html;
   document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => storyRoomKey(+b.dataset.story)));
@@ -397,6 +401,8 @@ function renderShop() {
       <div class="skinRow">${p.skins.map((sid, i) => `<div class="skinCell"><canvas class="skinprev" data-skin="${sid}" width="46" height="46"></canvas>
         <div class="small">${SKINS[sid].name}</div>${rarityTag(skinOdds[i][2])} <span class="muted small">${skinOdds[i][1]}%</span></div>`).join("")}</div>
       <button data-buy-skin="${pid}" ${pts < ECON.SKIN_PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.SKIN_PACK_COST}</button></div>`).join("");
+  if (PROFILE.update3 && typeof creatorPackHtml === "function") el("skinPacks").innerHTML += creatorPackHtml(pts);
+  document.querySelectorAll("[data-buy-creator]").forEach(b => b.onclick = () => buyPack("creator", "creator"));
   document.querySelectorAll("[data-buy-ability]").forEach(b => b.onclick = () => buyPack("ability", b.dataset.buyAbility));
   document.querySelectorAll("[data-buy-skin]").forEach(b => b.onclick = () => buyPack("skin", b.dataset.buySkin));
 }
@@ -412,7 +418,7 @@ const REEL_CELL = 104, REEL_LEN = 46, REEL_AT = 38, REEL_MS = 5600;
 function packItems(kind0, pid) {
   const ev = currentEvent(), lucky = ev && ev.id === "lucky";
   let items = kind0 === "limited" ? LIMITED_PACKS[pid].items : kind0 === "ability" ? ABILITY_PACKS[pid].items
-    : SKIN_PACKS[pid].skins.map((sid, i) => [sid, SKIN_ODDS[i][1], SKIN_ODDS[i][0]]);
+    : kind0 === "creator" ? CREATOR_PACK.items : SKIN_PACKS[pid].skins.map((sid, i) => [sid, SKIN_ODDS[i][1], SKIN_ODDS[i][0]]);
   return lucky && kind0 !== "limited" ? luckyOdds(items) : items;
 }
 function reelCell(id, isSkin) {
@@ -421,8 +427,8 @@ function reelCell(id, isSkin) {
   return `<div class="reelCell r-${r}" style="--rc:${RARITY[r].color}">${look}<div class="reelName">${esc(isSkin ? SKINS[id].name : RULES[id].name)}</div></div>`;
 }
 function showRoll(kind0, pid, prize, rarity, count, newMe, isSkin, near) {
-  const pack = kind0 === "limited" ? LIMITED_PACKS[pid] : kind0 === "ability" ? ABILITY_PACKS[pid] : SKIN_PACKS[pid];
-  const skin = kind0 === "skin" || !!isSkin;
+  const pack = kind0 === "limited" ? LIMITED_PACKS[pid] : kind0 === "ability" ? ABILITY_PACKS[pid] : kind0 === "creator" ? CREATOR_PACK : SKIN_PACKS[pid];
+  const skin = kind0 === "skin" || kind0 === "creator" || !!isSkin;
   const items = packItems(kind0, pid), total = items.reduce((a, b) => a + b[1], 0);
   const pickRandom = () => { let r = Math.random() * total; for (const it of items) if ((r -= it[1]) < 0) return it[0]; return items[0][0]; };
   const strip = [];
@@ -482,7 +488,7 @@ function renderInventory() {
 function toggleLoadout(id) {
   let lo = (PROFILE.loadout || []).slice();
   if (lo.includes(id)) lo = lo.filter(x => x !== id);
-  else if (lo.length >= 3) { toast("You can only equip 3. Unequip one first.", true); return; }
+  else if (lo.length >= (PROFILE.maxLoadout || 3)) { toast(`You can only equip ${PROFILE.maxLoadout || 3}. Unequip one first.`, true); return; }
   else lo.push(id);
   PROFILE.loadout = lo; renderInventory(); renderPlay();       // show it straight away
   api("loadout", { ids: lo }).then(setProfile).catch(e => toast(e.message, true));

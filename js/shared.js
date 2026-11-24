@@ -60,12 +60,13 @@ const RULES = {
 
 const RARITY = {
   common:    { label: "Common",    color: "#9aa4b2" },
+  uncommon:  { label: "Uncommon",  color: "#66bb6a" },       // accessories only (Weekly Shop)
   rare:      { label: "Rare",      color: "#4fc3f7" },
   legendary: { label: "Legendary", color: "#ffb300" },
   mythical:  { label: "Mythical",  color: "#ff4dff" },
   platinum:  { label: "Platinum",  color: "#b9f2ff" },
 };
-const RARITY_RANK = { common: 0, rare: 1, legendary: 2, mythical: 3, platinum: 4 };
+const RARITY_RANK = { common: 0, uncommon: 0.5, rare: 1, legendary: 2, mythical: 3, platinum: 4 };
 
 const ABILITY_PACKS = {
   guardian:  { name: "Guardian Pack",  icon: "🛡️", theme: "Defence: block and cancel",
@@ -176,9 +177,30 @@ const STORY_LEVELS = [
     text: `The last two guards, from both sides, as fast as they get. <b>5 lanes</b> to dodge in. Hit both of them and the Captain has nowhere left to hide.` },
   { world: 2, name: "The Captain", icon: "🦹", title: "Level 20: The Captain",
     text: "The leader of the Shadow League. Dodge waves of up to <b>5 dodgeballs</b> across <b>6 lanes</b>. At the end, catch his normal balls to send them back. Hit him <b>7 times</b> to win! If he gets you, you start again from wave 1." },
+  // ---------------- World 3: the Founder (only after the update is switched on). Lose any level here and you go back to World 1.
+  { world: 3, name: "The Founders' Trial", icon: "🏛️", title: "Level 21: The Founders' Trial",
+    text: "The Shadow League was started by someone: <b>the Founder</b>. To get an audience, beat <b>3 bots</b> (1 hard, 2 super hard) in a normal game. <b>Lose any World 3 level and you go back to World 1, level 1.</b>" },
+  { world: 3, name: "Iron Hands", icon: "🧤", title: "Level 22: Iron Hands",
+    text: "<b>4 lanes</b>, very fast balls. Clap and catch <b>14 in a row</b>, then throw it back. One mistake and it's back to World 1." },
+  { world: 3, name: "Hailstorm", icon: "🌨️", title: "Level 23: Hailstorm",
+    text: `<b>5 lanes</b> and up to <b>4 dodgeballs</b> at once, faster than before. Survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 3, name: "Blur", icon: "👤", title: "Level 24: Blur",
+    text: "The guard moves between <b>4 lanes</b> faster than ever. <b>3 balls</b>. Aim with <b>A</b>/<b>D</b>, throw with <b>Space</b>." },
+  { world: 3, name: "Pincer", icon: "🦂", title: "Level 25: Pincer",
+    text: `Two of the Founder's guards from both sides. <b>5 lanes</b>, fast dodgeballs. Catch their normal balls and hit both.` },
+  { world: 3, name: "No Mercy", icon: "🔩", title: "Level 26: No Mercy",
+    text: "<b>5 lanes</b>. Catch <b>15 in a row</b>, faster than anything so far." },
+  { world: 3, name: "Avalanche", icon: "🏔️", title: "Level 27: Avalanche",
+    text: `<b>6 lanes</b> and up to <b>5 dodgeballs</b> at once. Find the one safe lane every time.` },
+  { world: 3, name: "Phantom Guard", icon: "🎯", title: "Level 28: Phantom Guard",
+    text: "The guard moves between <b>5 lanes</b>. You have <b>4 balls</b>." },
+  { world: 3, name: "Last Line", icon: "🧱", title: "Level 29: Last Line",
+    text: `The Founder's last two guards. <b>6 lanes</b> to dodge in, the fastest crossfire yet.` },
+  { world: 3, name: "The Founder", icon: "🗝️", title: "Level 30: The Founder",
+    text: "The one who started it all. Dodge waves of up to <b>6 dodgeballs</b> across <b>7 lanes</b>, then catch his normal balls to send them back. Hit him <b>9 times</b>. If he gets you, you go back to World 1." },
 ];
-const STORY_W1 = 10, STORY_W2 = 20, STORY_VERSION = 2;
-const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"] };   // levels that are normal games against bots
+const STORY_W1 = 10, STORY_W2 = 20, STORY_W3 = 30, STORY_VERSION = 3;   // 3: the reset also re-locks the story packs
+const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"], 21: ["hard", "super", "super"] };   // levels that are normal games against bots
 
 // limited packs: only in the shop while their event is on
 const LIMITED_PACKS = {
@@ -243,16 +265,43 @@ const SKIN_PACKS = {
   stone:   { name: "Stone Pack",   icon: "🗿", skins: ["pebble", "crystal", "titanCore"], story: true },
 };
 const EXTRA_SKINS = { brown: "common", mage: "mythical", barbarian: "mythical", angel: "mythical", devil: "mythical" };   // Legendary Skin Pack only
-const SKIN_IDS = [].concat(...Object.values(SKIN_PACKS).map(p => p.skins), Object.keys(EXTRA_SKINS));
+const SKIN_IDS = [].concat(...Object.values(SKIN_PACKS).map(p => p.skins), Object.keys(EXTRA_SKINS), ["creator_c", "creator_r", "creator_l"]);
 function skinRarity(id) {
   if (EXTRA_SKINS[id]) return EXTRA_SKINS[id];
+  if (id === "creator_c") return "common"; if (id === "creator_r") return "rare"; if (id === "creator_l") return "legendary";
   for (const p of Object.values(SKIN_PACKS)) { const i = p.skins.indexOf(id); if (i >= 0) return SKIN_ODDS[i][0]; }
   return "common";
 }
 
+// ---- Weekly accessory shop (unlocked by beating World 3; only after the update is switched on)
+// slot: where it goes on your character. Only one per slot can be worn at a time.
+const ACCESSORIES = {
+  pulse:     { name: "Pulse Ring",     rarity: "common",    slot: "aura",      desc: "A ring that pulses out from your character." },
+  wave:      { name: "Wave",           rarity: "common",    slot: "aura",      desc: "A shine that sweeps from the top of your character to the bottom." },
+  shake:     { name: "Jitter",         rarity: "common",    slot: "motion",    desc: "Your character shakes slightly all the time." },
+  shades:    { name: "Sunglasses",     rarity: "uncommon",  slot: "face",      desc: "A pair of sunglasses." },
+  fade:      { name: "Fade Out",       rarity: "uncommon",  slot: "death",     desc: "When you're out, you fade away." },
+  tophat:    { name: "Top Hat",        rarity: "uncommon",  slot: "hat",       desc: "A tall black top hat." },
+  smiley:    { name: "Smiley",         rarity: "uncommon",  slot: "face",      desc: "A hand-drawn smiley face." },
+  split:     { name: "Split",          rarity: "rare",      slot: "death",     desc: "When you're out, you split in half and fall off." },
+  cap:       { name: "Cap",            rarity: "rare",      slot: "hat",       desc: "A cap. Pick its colour in your inventory." },
+  fill:      { name: "Fill Up",        rarity: "rare",      slot: "charge",    desc: "Red liquid fills your character from the bottom while you charge a throw, in time with your bar." },
+  bluewall:  { name: "Blue Wallpaper", rarity: "rare",      slot: "wallpaper", desc: "A blue background for your game screen." },
+  explode:   { name: "Explosion",      rarity: "legendary", slot: "death",     desc: "When you're out, you explode." },
+  backpack:  { name: "Backpack",       rarity: "legendary", slot: "gear",      desc: "Lets you equip 4 abilities at a time instead of 3." },
+  lightning: { name: "Lightning Strike", rarity: "legendary", slot: "kill",    desc: "When you get someone out, lightning strikes them before their own out animation." },
+};
+const ACC_ODDS = [["common", 60], ["uncommon", 25], ["rare", 14], ["legendary", 1]];
+const ACC_PRICE = { common: 120, uncommon: 250, rare: 500, legendary: 1500 };
+const CAP_COLORS = ["#e53935", "#1e88e5", "#43a047", "#fdd835", "#8e24aa", "#fb8c00", "#212121", "#f5f5f5"];
+const WEEKLY = { SLOTS: 3, REFRESH_POOL: 12500, MIN_CHIP: 10 };
+// Creator Pack: 3 skins made by friends. The admin uploads the pictures. Unlocked by beating World 3.
+const CREATOR_SKINS = ["creator_c", "creator_r", "creator_l"];
+const CREATOR_PACK = { name: "Creator Pack", cost: 300, items: [["creator_c", 60, "common"], ["creator_r", 32, "rare"], ["creator_l", 8, "legendary"]] };
+
 const ECON = {
   START_POINTS: 0, PACK_COST: 50, SKIN_PACK_COST: 100, TRADE_COST: 5,
   WIN_POINTS: 25, ELIM_POINTS: 5, RISK_MIN_STAKE: 5, BAN_MS: 30 * 60 * 1000,
-  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", MAX_PLAYERS: 6,
+  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, ADMIN_USERNAME: "bajajhamish", HELPER_USERNAME: "kythor", MAX_PLAYERS: 6,
 };
 

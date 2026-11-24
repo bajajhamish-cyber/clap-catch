@@ -65,6 +65,7 @@ function draw(pos0, t) {
   ctx.save();
   if (fxOn("quake") && fx.quake.by !== me.id) ctx.translate((Math.random() - 0.5) * 18, (Math.random() - 0.5) * 18);
   if (golden) { const g = ctx.createRadialGradient(480, 330, 60, 480, 330, 520); g.addColorStop(0, "#4a3a08"); g.addColorStop(1, "#1f1803"); ctx.fillStyle = g; ctx.fillRect(-20, -20, 1000, 680); }
+  else if (U3 && accOf(players[me.id]).wallpaper === "bluewall") { const g = ctx.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, "#1e4f9a"); g.addColorStop(1, "#0b2552"); ctx.fillStyle = g; ctx.fillRect(-20, -20, 1000, 680); }
   ctx.strokeStyle = golden ? "#8a6d12" : "#262a35"; ctx.lineWidth = 2; ctx.setLineDash([6, 10]);
   ctx.beginPath(); ctx.ellipse(480, 330, 350, 225, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
 
@@ -103,23 +104,36 @@ function draw(pos0, t) {
 
     let sx = 0, sy = 0;
     if (isHolder && holderCharge > 0.6) { const s = (holderCharge - 0.6) * 8; sx = (Math.random() - 0.5) * s; sy = (Math.random() - 0.5) * s; }
+    const acc = mirage ? {} : accOf(p);
+    if (!p.out) { const [jx, jy] = accShake(acc, performance.now()); sx += jx; sy += jy; }
 
     const gr = gripOf(id), C = gr && gr.giant ? CUBE * (gr.giant === true ? 1.5 : gr.giant) : CUBE;
+    const dying = U3 ? deathState(p, t) : null;
+    if (dying) {           // out animation (accessories): drawn instead of the grey "out" cube for a moment
+      drawDeath(ctx, p, dying, q.x - C / 2, q.y - C / 2, C);
+      ctx.fillStyle = "#777"; ctx.font = "bold 15px Nunito, system-ui"; ctx.textAlign = "center";
+      ctx.fillText(p.name + (id === me.id ? " (you)" : ""), q.x, q.y + C / 2 + 20);
+      return;
+    }
+    if (!p.out) accAura(ctx, acc, q.x - C / 2 + sx, q.y - C / 2 + sy, C, performance.now());
     ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(q.x - C / 2 + 4 + sx, q.y - C / 2 + 6 + sy, C, C);
     const X = q.x - C / 2 + sx, Y = q.y - C / 2 + sy;
     if (p.out) { ctx.fillStyle = "#3a3d46"; ctx.fillRect(X, Y, C, C); }
     else {
       if (mirage) { ctx.fillStyle = "#8e8e9e"; ctx.fillRect(X, Y, C, C); }
       else drawSkin(ctx, p.skin || "default", X, Y, C, p.color, performance.now());
-      if (isHolder) {   // the charge colour still shows over any skin: green -> red -> dark red
+      if (isHolder && !(U3 && smoked) && !(acc.charge === "fill" && !smoked)) {   // the charge colour shows over any skin (Smokescreen hides it too, after the update)
         ctx.globalAlpha = 0.55 + 0.45 * holderCharge; ctx.fillStyle = chargeColor(holderCharge);
         ctx.fillRect(X, Y, C, C); ctx.globalAlpha = 1;
       }
+      if (isHolder && !smoked) accFill(ctx, acc, X, Y, C, holderCharge);      // Fill Up: red liquid in time with the bar
+      accWave(ctx, acc, X, Y, C, performance.now());
       if (ball && ball.bounty === id && !mirage) { ctx.font = "22px Nunito, system-ui"; ctx.textAlign = "center"; ctx.fillText("💰", q.x + C / 2, q.y - C / 2 + 4); }
     }
     ctx.lineWidth = id === me.id ? 4 : 2; ctx.strokeStyle = id === me.id ? "#fff" : "rgba(255,255,255,0.25)";
     if (pickMode && pickValid(pickMode, id)) { ctx.strokeStyle = "#c77dff"; ctx.lineWidth = 4; }
     ctx.strokeRect(q.x - C / 2 + sx, q.y - C / 2 + sy, C, C);
+    if (!p.out && !mirage) { accFace(ctx, acc, X, Y, C); accHat(ctx, acc, X, Y, C); }
 
     if (p.out) {
       ctx.strokeStyle = "#ff5252"; ctx.lineWidth = 4;

@@ -58,11 +58,17 @@ function storyWindows() {
       <button type="button" id="storyGo">Let's go!</button>`;
   } else if (state === "won") {
     const r = (S.story && S.story.result) || S.storyResult;
-    const pts = !r || r.pending ? "Saving…" : r.error ? "Couldn't save, try again later" : r.first ? "+20 points!" : "Already beaten before (no points this time)";
+    const pts = !r || r.pending ? "Saving…" : r.error ? "Couldn't save, try again later" : r.first ? "+20 points!" : (typeof U3 !== "undefined" && U3 ? "No points: you've beaten this one before" : "Already beaten before (no points this time)");
     html = `<div class="storyBig">🏆</div><h2>Level ${lv} complete!</h2><p class="storyPts">${pts}</p>
       ${lv === 10 ? `<p>👑 You took your full power back from the boss!${r && r.unlocked ? " New packs are waiting in your Shop: the ⚡ Titan Pack and 3 new skin packs." : ""}${PROFILE && PROFILE.world2 ? " But who was giving him orders? World 2 is open…" : ""}</p>` : ""}
-      ${lv === 20 ? `<p>🦹 The Captain is beaten and the Shadow League is finished!${r && r.unlocked ? " The 🌑 Shadow Pack is in your Shop, and you now get 2 extra daily quests." : ""}</p>` : ""}
-      <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) ? `<button type="button" id="storyNext">Next level ▶</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
+      ${lv === 20 ? `<p>🦹 The Captain is beaten and the Shadow League is finished!${r && r.unlocked ? " The 🌑 Shadow Pack is in your Shop, and you now get 2 extra daily quests." : ""}${PROFILE && PROFILE.update3 ? " But someone started the Shadow League…" : ""}</p>` : ""}
+      ${lv === 30 ? `<p>The Founder is beaten.${r && r.unlocked ? " The Weekly Shop and the Creator Pack are now unlocked." : ""}</p>` : ""}
+      <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) || (lv >= 20 && lv < 30 && PROFILE && PROFILE.world2 && PROFILE.update3) ? `<button type="button" id="storyNext">Next level ▶</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
+  } else if (lv > 20) {                    // World 3: no second tries, it's back to World 1
+    const why = (S.story && S.story.reason) || "The bots won this one. You're back to World 1, level 1";
+    html = `<div class="storyBig">💥</div><h2>Back to the start</h2><p>${escHtml(why)}.</p><p class="muted small">The story packs are locked again until you beat the bosses again. Everything you already have stays yours.</p>
+      <div class="row" style="justify-content:center"><button type="button" id="storyMenu">Back to menu</button></div>`;
+    if (PROFILE) { PROFILE.storyDone = []; PROFILE.storyUnlocked = PROFILE.story2Unlocked = PROFILE.story3Unlocked = false; }
   } else {
     html = `<div class="storyBig">💥</div><h2>Not this time</h2><p>${escHtml((S.story && S.story.reason) || "The bots won this one.")}</p>
       <div class="row" style="justify-content:center"><button type="button" id="storyRetry">Try again</button><button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
@@ -86,7 +92,7 @@ function drawStory(t) {
   const g = c.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, "#151821"); g.addColorStop(1, "#1d2230"); c.fillStyle = g; c.fillRect(0, 0, 960, 640);
   c.strokeStyle = "#2a3040"; c.setLineDash([8, 12]); c.lineWidth = 2; c.beginPath(); c.moveTo(480, 60); c.lineTo(480, 600); c.stroke(); c.setLineDash([]);
   const L = STORY_LEVELS[st.level - 1];
-  c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} ${L.world === 2 ? "World 2 · " : ""}Level ${st.level}: ${L.name}`, 16, 30);
+  c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff"; c.fillText(`${L.icon} ${L.world > 1 ? `World ${L.world} · ` : ""}Level ${st.level}: ${L.name}`, 16, 30);
   // smooth gliding between lanes
   if (storyLevelShown !== st.level) { storyLevelShown = st.level; glide = {}; predRow = null; }
   const pnow = performance.now(), dt = Math.min(0.1, (pnow - (glideAt || pnow)) / 1000); glideAt = pnow;
@@ -173,12 +179,16 @@ function ballShape(c, kind, s) {
   else { c.fillStyle = "#fff"; c.fillRect(-s / 2, -s / 2, s, s); }
 }
 function drawBoss(c, e, t) {
-  const x = e.x, y = 320, s = 190, angry = e.hp <= 2, cap = e.look === "captain", maxHp = e.maxHp || 5;
+  const x = e.x, y = 320, s = 190, angry = e.hp <= 2, cap = e.look === "captain", founder = e.look === "founder", maxHp = e.maxHp || 5;
   if (!e.alive) c.globalAlpha = 0.35;
   c.fillStyle = "rgba(0,0,0,.4)"; c.fillRect(x - s / 2 + 8, y - s / 2 + 10, s, s);
   const g = c.createLinearGradient(x, y - s / 2, x, y + s / 2);
-  g.addColorStop(0, cap ? "#263238" : "#6a1b9a"); g.addColorStop(1, cap ? "#0d1117" : "#311b92"); c.fillStyle = g; c.fillRect(x - s / 2, y - s / 2, s, s);
-  if (cap) {          // the Captain: a dark captain's hat with a red badge
+  g.addColorStop(0, founder ? "#eceff1" : cap ? "#263238" : "#6a1b9a"); g.addColorStop(1, founder ? "#90a4ae" : cap ? "#0d1117" : "#311b92"); c.fillStyle = g; c.fillRect(x - s / 2, y - s / 2, s, s);
+  if (founder) {      // the Founder: pale stone with a gold band and a key mark
+    c.fillStyle = "#c9a227"; c.fillRect(x - s / 2, y - s / 2 + 18, s, 10);
+    c.strokeStyle = "#c9a227"; c.lineWidth = 5; c.beginPath(); c.arc(x, y - s / 2 - 22, 13, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(x, y - s / 2 - 9); c.lineTo(x, y - s / 2 + 2); c.stroke();
+  } else if (cap) {          // the Captain: a dark captain's hat with a red badge
     c.fillStyle = "#111"; c.fillRect(x - 80, y - s / 2 - 12, 160, 14); c.fillRect(x - 55, y - s / 2 - 52, 110, 42);
     c.fillStyle = "#e53935"; c.beginPath(); c.arc(x, y - s / 2 - 30, 11, 0, Math.PI * 2); c.fill();
     c.fillStyle = "#4dd0e1"; c.fillRect(x - s / 2, y + s / 2 - 16, s, 6);
@@ -196,5 +206,5 @@ function drawBoss(c, e, t) {
   c.fillStyle = "#111"; c.fillRect(x - 100, 40, 200, 22);
   const seg = 196 / maxHp;
   for (let i = 0; i < maxHp; i++) { c.fillStyle = i < e.hp ? "#e53935" : "#3a3d46"; c.fillRect(x - 96 + i * seg, 44, seg - 3, 14); }
-  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText(`${cap ? "🦹" : "👹"} ${(e.name || "The Boss").toUpperCase()}`, x, 34);
+  c.font = "bold 14px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText(`${founder ? "" : cap ? "🦹 " : "👹 "}${(e.name || "The Boss").toUpperCase()}`, x, 34);
 }

@@ -295,3 +295,59 @@ body.ev-golden .tabs button { background: transparent; }
 body.ev-golden .tabs button.active { background: transparent; color: #ffd54f; border-bottom-color: #ffd54f; }
 
 .worldHead { margin: 14px 0 8px; font-size: 17px; }
+
+/* ---------------- newer screens: Weekly Shop, accessories, Creator Pack uploads ---------------- */
+.weeklyGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 760px) { .weeklyGrid { grid-template-columns: 1fr; } }
+.weeklyItem { align-items: center; text-align: center; }
+.weeklyItem .accPrev { background: #12141a; border-radius: 6px; }
+.poolBar { height: 12px; background: #2b2f3a; border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.poolBar > div { height: 100%; width: 0; background: #ef5f2a; transition: width .4s; }
+.accGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.accCard { background: #1e2129; border: 1px solid #2c283a; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
+.accCard.on { border-color: #ffcc33; }
+.capColors { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.capDot { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 2px solid #444; box-shadow: none; }
+.capDot.on { border-color: #fff; }
+.creatorRow { gap: 8px; flex-wrap: wrap; }
+.creatorPrev img { width: 48px; height: 48px; display: block; image-rendering: auto; border-radius: 4px; }
+.creatorPrev { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+
+/* ---------------- the plainer look (only once the update is switched on: body.u3) ----------------
+   Flat solid colours, square-ish corners, no see-through panels, fewer decorations. */
+body.u3 { background: #111315; background-image: none; color: #e7e5e0; font-family: "Barlow", "Segoe UI", Arial, sans-serif; font-size: 16px; }
+body.u3 h2, body.u3 h3, body.u3 h4, body.u3 .packHead { font-family: "Barlow Semi Condensed", "Barlow", Arial, sans-serif; font-weight: 700; letter-spacing: 0; }
+body.u3 input, body.u3 select, body.u3 textarea { background: #0b0c0d; border: 1px solid #34383d; border-radius: 3px; font-family: inherit; }
+body.u3 input:focus { border-color: #d6452b; }
+body.u3 button { background: #d6452b; border-radius: 3px; box-shadow: none; font-weight: 600; letter-spacing: 0; transition: none; }
+body.u3 button:hover { filter: none; background: #e2563c; }
+body.u3 button:active:not(:disabled) { transform: none; box-shadow: none; background: #b93a23; }
+body.u3 button.secondary { background: #2b2e33; box-shadow: none; }
+body.u3 button.secondary:hover { background: #34383e; }
+body.u3 button.ghost { background: none; border: 1px solid #3a3e44; }
+body.u3 button:disabled { background: #2a2c2f; color: #74787e; }
+body.u3 .card, body.u3 .pack, body.u3 .panel, body.u3 #log, body.u3 .topbar, body.u3 .invItem, body.u3 .skinCard, body.u3 .accCard, body.u3 .mode, body.u3 .quest {
+  background: #1a1c1f; border: 1px solid #2a2d31; border-radius: 4px; box-shadow: none; }
+body.u3 .muted { color: #8d9198; }
+body.u3 .tabs { gap: 0; border-bottom: 1px solid #2a2d31; }
+body.u3 .tabs button { background: none; border-radius: 0; color: #a3a7ad; padding: 10px 14px; border-bottom: 2px solid transparent; }
+body.u3 .tabs button:hover { background: none; color: #fff; }
+body.u3 .tabs button.active { background: none; color: #fff; border-bottom-color: #d6452b; }
+body.u3 .mode:hover { transform: none; border-color: #3a3e44; }
+body.u3 .mode.active { border-color: #d6452b; background: #1e2023; }
+body.u3 .warn { background: #2a2416; border: 1px solid #5e4c1f; border-radius: 3px; color: #f0d79a; }
+body.u3 .tag { border-radius: 3px; background: #2b2e33; }
+body.u3 kbd { background: #26292d; border: 1px solid #3a3e44; border-radius: 2px; }
+body.u3 #c, body.u3 canvas#c { background: #17191c; border: 1px solid #2a2d31; border-radius: 4px; }
+body.u3 #toast { border-radius: 3px; box-shadow: none; }
+body.u3 .poolBar, body.u3 .questBar { border-radius: 0; background: #26292d; }
+body.u3 .poolBar > div, body.u3 .questBar > div { background: #d6452b; }
+body.u3 .points { color: #f2c14e; }
+body.u3 .accCard.on, body.u3 .skinCard.on, body.u3 .invItem.on { border-color: #d6452b; }
+body.u3 .weeklyItem .accPrev { border-radius: 2px; background: #0f1012; }
+/* pop-up windows: solid dark backdrop instead of see-through */
+body.u3 #rollModal, body.u3 #tutModal, body.u3 #storyModal, body.u3 #noticeModal, body.u3 #dmModal, body.u3 #adminPanel, body.u3 #keyModal, body.u3 #rulePanel, body.u3 #limitScreen { background: #0c0d0f; }
+body.u3 #rollModal .box, body.u3 #tutModal .box, body.u3 #storyModal .box, body.u3 #noticeModal .box, body.u3 #dmModal .box, body.u3 #adminPanel .box, body.u3 #keyModal .box, body.u3 #rulePanel .box {
+  background: #1a1c1f; border: 1px solid #2a2d31; border-radius: 4px; box-shadow: none; }
+body.u3 .dm { border-radius: 3px; }
+body.u3 .dm.mine { background: #d6452b; }

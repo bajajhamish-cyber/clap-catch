@@ -32,11 +32,65 @@ el("adminEventStop").onclick = () => adminDo("adminConfig", { stopEvent: true },
 el("adminWorld2Btn").onclick = () => adminDo("adminConfig", { world2: !adminCfg.world2 }, `Story World 2 is now ${adminCfg.world2 ? "OFF" : "ON"}`).then(() => api("me").then(setProfile));
 el("adminTeamBtn").onclick = () => adminDo("adminConfig", { antiTeaming: !adminCfg.antiTeaming }, `Anti-teaming is now ${adminCfg.antiTeaming ? "OFF" : "ON"}`);
 
+// ---- the one-time switch for the new update (press twice to be sure)
+let updateArmed = 0;
+el("adminUpdateBtn").onclick = async () => {
+  if (Date.now() - updateArmed > 4000) { updateArmed = Date.now(); el("adminUpdateBtn").textContent = "Click again to confirm"; setTimeout(() => { if (el("adminUpdateBtn")) el("adminUpdateBtn").textContent = "Switch on the update"; }, 4000); return; }
+  updateArmed = 0;
+  try { await api("adminActivate"); toast("The update is on"); el("adminUpdateCard").hidden = true; setTimeout(() => location.reload(), 900); }
+  catch (e) { toast(e.message, true); }
+};
+// ---- Creator Pack pictures: shrink to 128x128 in the browser, then upload
+const CREATOR_LABEL = { creator_c: "Common", creator_r: "Rare", creator_l: "Legendary" };
+function creatorRows(skinsNow) {
+  el("adminCreatorRows").innerHTML = Object.keys(CREATOR_LABEL).map(id => {
+    const cur = skinsNow[id];
+    return `<div class="adminRow creatorRow"><span class="creatorPrev">${cur ? `<img src="${cur.img}" alt="">` : "<span class='muted small'>none yet</span>"}</span>
+      <b style="width:84px">${CREATOR_LABEL[id]}</b>
+      <input type="text" maxlength="24" placeholder="Skin name" data-cname="${id}" value="${cur ? esc(cur.name) : ""}">
+      <input type="file" accept="image/png,image/jpeg,image/webp" data-cfile="${id}">
+      <button type="button" data-cup="${id}">Upload</button></div>`;
+  }).join("");
+  document.querySelectorAll("[data-cup]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.cup, f = document.querySelector(`[data-cfile="${id}"]`).files[0], name = document.querySelector(`[data-cname="${id}"]`).value.trim();
+    if (!f) return toast("Pick a picture first", true);
+    try {
+      const img = await shrinkImage(f, 128);
+      await api("creatorUpload", { id, img, name }); toast(`${CREATOR_LABEL[id]} skin uploaded`);
+      CREATOR = null; loadCreatorSkins().then(refreshAdmin);
+    } catch (e) { toast(e.message, true); }
+  });
+}
+function shrinkImage(file, size) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onerror = () => rej(new Error("Couldn't read that file"));
+    r.onload = () => {
+      const im = new Image();
+      im.onerror = () => rej(new Error("That isn't a picture"));
+      im.onload = () => {
+        const c = document.createElement("canvas"); c.width = c.height = size;
+        const s = Math.min(im.width, im.height), cx = c.getContext("2d");
+        cx.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, size, size);       // centre square crop
+        res(c.toDataURL("image/png"));
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
 async function refreshAdmin() {
   if (!PROFILE || !PROFILE.isAdmin) return;
   try {
     const d = await api("adminLists");
     adminCfg = d.config;
+    const owner = d.role !== "helper";
+    el("adminUpdateCard").hidden = !(owner && !adminCfg.update3);
+    el("adminCreatorCard").hidden = !(owner && adminCfg.update3);
+    el("adminEventCard").hidden = !owner;
+    el("adminLuckyLimit").textContent = owner ? "" : " You can give 1 a day, and not to yourself.";
+    if (owner && adminCfg.update3) creatorRows((await loadCreatorSkins()) || {});
     el("adminTeamBtn").textContent = adminCfg.antiTeaming ? "ON" : "OFF";
     const ev = adminCfg.event && adminCfg.event.until > Date.now() ? adminCfg.event : null;
     el("adminEventNow").innerHTML = ev ? `Now: <b>${EVENTS[ev.id].icon} ${EVENTS[ev.id].name}</b>, ${timeLeft(ev.until - Date.now())} left` : "No event on right now.";
