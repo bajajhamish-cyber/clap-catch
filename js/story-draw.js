@@ -66,11 +66,6 @@ function storyWindows() {
       ${lv === 20 ? `<p>🦹 The Captain is beaten and the Shadow League is finished!${r && r.unlocked ? " The 🌑 Shadow Pack is in your Shop, and you now get 2 extra daily quests." : ""}${PROFILE && PROFILE.update3 ? " But someone started the Shadow League…" : ""}</p>` : ""}
       ${lv === 30 ? `<p>The Founder is beaten.${r && r.unlocked ? " The Weekly Shop and the Creator Pack are now unlocked." : ""}</p>` : ""}
       <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) || (lv >= 20 && lv < 30 && PROFILE && PROFILE.world2 && PROFILE.update3) ? `<button type="button" id="storyNext" ${r ? "" : "disabled"}>${r ? "Next level ▶" : "Saving…"}</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
-  } else if (lv > 20) {                    // World 3: no second tries, it's back to level 21
-    const why = (S.story && S.story.reason) || "The bots won this one. You're back to level 21";
-    html = `<div class="storyBig">💥</div><h2>Back to level 21</h2><p>${escHtml(why)}.</p><p class="muted small">Worlds 1 and 2 stay beaten, and everything you've unlocked stays yours.</p>
-      <div class="row" style="justify-content:center"><button type="button" id="storyMenu">Back to menu</button></div>`;
-    if (PROFILE) PROFILE.storyDone = (PROFILE.storyDone || []).filter(l => l <= STORY_W2);
   } else {
     html = `<div class="storyBig">💥</div><h2>Not this time</h2><p>${escHtml((S.story && S.story.reason) || "The bots won this one.")}</p>
       <div class="row" style="justify-content:center"><button type="button" id="storyRetry">Try again</button><button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;

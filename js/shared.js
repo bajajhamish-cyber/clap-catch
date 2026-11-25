@@ -178,7 +178,7 @@ const STORY_LEVELS = [
     text: `The last two guards, from both sides, as fast as they get. <b>5 lanes</b> to dodge in. Hit both of them and the Captain has nowhere left to hide.` },
   { world: 2, name: "The Captain", icon: "🦹", title: "Level 20: The Captain",
     text: "The leader of the Shadow League. Dodge waves of up to <b>5 dodgeballs</b> across <b>6 lanes</b>. At the end, catch his normal balls to send them back. Hit him <b>7 times</b> to win! If he gets you, you start again from wave 1." },
-  // ---------------- World 3: the Founder (only after the update is switched on). Lose any level here and you go back to level 21.
+  // ---------------- World 3: the Founder (only after the update is switched on).
   { world: 3, name: "The Founders' Trial", icon: "🏛️", title: "Level 21: The Founders' Trial",
     text: "The Shadow League was started by someone: <b>the Founder</b>. To get an audience, beat <b>3 bots</b> (1 hard, 2 medium) in a normal game." },
   { world: 3, name: "Iron Hands", icon: "🧤", title: "Level 22: Iron Hands",
@@ -198,7 +198,7 @@ const STORY_LEVELS = [
   { world: 3, name: "Last Line", icon: "🧱", title: "Level 29: Last Line",
     text: "<b>5 lanes</b>, fast balls, and every ball is a <b>curve ball</b>: it heads for one lane, then turns into another. Be in the lane it ends up in. Clap and catch <b>12 in a row</b>, then throw it back with <b>Space</b>." },
   { world: 3, name: "The Founder", icon: "🗝️", title: "Level 30: The Founder",
-    text: `The one who started it all. Dodge waves of up to <b>6 dodgeballs</b> across <b>7 lanes</b>, in <b>3 phases</b>: plain balls first, then <b>curve balls</b>, then <b>bombs, ghosts and curves</b> all mixed. At the end, he throws normal balls in the only safe lane: clap and catch them to send them back. Hit him <b>9 times</b>.` },
+    text: `The one who started it all. Dodge waves of up to <b>6 dodgeballs</b> across <b>7 lanes</b>, in <b>3 phases</b>: plain balls first, then <b>curve balls</b>, then <b>bombs, ghosts and curves</b> all mixed. At the end, he throws normal balls in the only safe lane: clap and catch them to send them back. Hit him <b>9 times</b> to win! If he gets you, you start again from wave 1.` },
 ];
 const STORY_W1 = 10, STORY_W2 = 20, STORY_W3 = 30, STORY_VERSION = 3;   // 3: the reset also re-locks the story packs
 const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"], 21: ["hard", "medium", "medium"] };   // levels that are normal games against bots
