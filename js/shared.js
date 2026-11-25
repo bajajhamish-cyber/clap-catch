@@ -65,8 +65,9 @@ const RARITY = {
   legendary: { label: "Legendary", color: "#ffb300" },
   mythical:  { label: "Mythical",  color: "#ff4dff" },
   platinum:  { label: "Platinum",  color: "#b9f2ff" },
+  og:        { label: "OG",        color: "#ffd740" },        // OG skins (one per player, never tradeable)
 };
-const RARITY_RANK = { common: 0, uncommon: 0.5, rare: 1, legendary: 2, mythical: 3, platinum: 4 };
+const RARITY_RANK = { common: 0, uncommon: 0.5, rare: 1, legendary: 2, mythical: 3, og: 3.5, platinum: 4 };
 
 const ABILITY_PACKS = {
   guardian:  { name: "Guardian Pack",  icon: "🛡️", theme: "Defence: block and cancel",
@@ -298,6 +299,35 @@ const WEEKLY = { SLOTS: 3, REFRESH_POOL: 12500, MIN_CHIP: 10 };
 // Creator Pack: 3 skins made by friends. The admin uploads the pictures. Unlocked by beating World 3.
 const CREATOR_SKINS = ["creator_c", "creator_r", "creator_l"];
 const CREATOR_PACK = { name: "Creator Pack", cost: 300, items: [["creator_c", 60, "common"], ["creator_r", 32, "rare"], ["creator_l", 8, "legendary"]] };
+
+// ---- OG skins: one special skin each for these players (bajajhamish uploads the pictures)
+const OG = { USERS: ["doom", "kythor", "cookie_clicker", "imsmaat"], GAMES: 50, WINS: 10, COST: 1000 };
+// ---- Boss Rush (rogue-like): beat boss after boss; every level is harder. Needs World 3 beaten.
+const ROGUE = { MAX: 250 };
+function rogueReward(level) {             // points for clearing a level (only every 10th level pays)
+  if (level % 10 !== 0) return 0;
+  if (level === 100) return 150;
+  return level <= 50 ? 10 : 20;
+}
+// the boss for a Boss Rush level. 1 = the World 1 boss, 30 = the Captain, 60 = the Founder,
+// 100 = close to impossible, and it keeps getting worse up to 250.
+function rogueLevel(L) {
+  const K = [   // level, lanes, most balls at once, speed (lower = faster), health, waves, curveball %, ghost %, bomb %
+    [1,   5, 4, 1.00, 3, 10, 0,    0,    0],
+    [30,  6, 5, 0.90, 5, 14, 0.10, 0,    0],
+    [60,  7, 6, 0.82, 7, 18, 0.30, 0.15, 0.10],
+    [100, 7, 6, 0.50, 9, 24, 0.60, 0.40, 0.25],
+    [250, 7, 6, 0.27, 12, 30, 0.90, 0.70, 0.40],
+  ];
+  L = Math.max(1, Math.min(ROGUE.MAX, Math.floor(L)));
+  let i = 0; while (i < K.length - 2 && L > K[i + 1][0]) i++;
+  const [a, b] = [K[i], K[i + 1]], f = (L - a[0]) / (b[0] - a[0]), mix = j => a[j] + (b[j] - a[j]) * f;
+  return {
+    lanes: Math.round(mix(1)), maxBalls: Math.round(mix(2)), speed: +mix(3).toFixed(3), hp: Math.round(mix(4)), waves: Math.round(mix(5)),
+    curve: +mix(6).toFixed(3), ghost: +mix(7).toFixed(3), bomb: +mix(8).toFixed(3),
+    slow: L >= 100 ? 1 : L <= 60 ? 1.25 : 1.25 - 0.25 * (L - 60) / 40,     // big waves come a bit slower early on; not any more by level 100
+  };
+}
 
 const ECON = {
   START_POINTS: 0, PACK_COST: 50, SKIN_PACK_COST: 100, TRADE_COST: 5,

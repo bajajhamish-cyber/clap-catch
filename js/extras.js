@@ -217,9 +217,12 @@ el("weeklyChipBtn").onclick = async () => {
 function storyW3Html(row) {
   const done = PROFILE.storyDone || [];
   const w3 = STORY_LEVELS.map((L, i) => [L, i]).filter(([L]) => L.world === 3);
-  let h = `<h3 class="worldHead">World 3: The Founder</h3><div class="muted small" style="margin-bottom:6px">Lose any level here and you go back to World 1, level 1, and the story packs lock again (you keep everything you already have).</div>`;
+  let h = `<h3 class="worldHead">World 3: The Founder</h3><div class="muted small" style="margin-bottom:6px">Lose any level here and you go back to level 21. Worlds 1 and 2 and everything you've unlocked stay.</div>`;
   h += done.includes(STORY_W2) ? w3.map(([L, i]) => row(L, i)).join("") : `<div class="muted small">Beat the World 2 boss (level 20) to open World 3.</div>`;
   if (PROFILE.story3Unlocked) h += `<div class="muted small" style="margin-top:8px">You beat the Founder. The Weekly Shop and the Creator Pack are unlocked.</div>`;
+  h += `<div class="card rogueCard"><div><h3 style="margin:0">Boss Rush</h3><div class="muted small">Endless bosses, each one harder, one life. Points every 10 levels.${PROFILE.story3Unlocked ? ` Your best: ${PROFILE.rogueBest ? "level " + PROFILE.rogueBest : "none yet"}.` : " Beat World 3 to unlock it."}</div></div>
+    <button type="button" id="rogueBtn" ${PROFILE.story3Unlocked ? "" : "disabled"}>${PROFILE.story3Unlocked ? "Play" : "Locked"}</button></div>`;
+  setTimeout(() => { const b = el("rogueBtn"); if (b) b.onclick = () => enterRoom(async () => rogueRoomKey()); }, 0);
   return h;
 }
 

@@ -53,6 +53,7 @@
     <button data-tab="friends">Friends <span id="friendBadge"></span></button>
     <button data-tab="board">Board</button>
     <button data-tab="quests">Quests <span id="questBadge"></span></button>
+    <button data-tab="leaders">Leaderboard</button>
     <button data-tab="weekly" id="weeklyTabBtn" hidden>Weekly Shop</button>
   </div>
 
@@ -178,6 +179,12 @@
     <div class="card" id="friendOutCard" hidden><h3 style="margin-top:0">Requests you sent</h3><div id="friendOut"></div></div>
   </div>
 
+  <div id="tab-leaders" class="tab" hidden>
+    <div class="card"><h2 style="margin:0">Leaderboard</h2>
+      <div class="muted small">The top 10 players. Updates every 10 minutes. Everyone on a board at midnight (Canberra time) gets a free pack in the Shop for the next day (one for each board you're number 1 on, if that's more).</div>
+      <div id="lbNote" class="small" style="margin-top:6px"></div></div>
+    <div id="lbGrid" class="lbGrid"></div>
+  </div>
   <div id="tab-board" class="tab" hidden>
     <div class="card boardHead">
       <h2 style="margin:0">🎟️ The Board</h2>
@@ -258,6 +265,14 @@
 
 <div id="adminPanel"><div class="box">
   <div class="row" style="justify-content:space-between"><h2 style="margin:0">🛠️ Admin</h2><button type="button" id="adminClose" class="ghost">Close (P)</button></div>
+  <div class="adminWrap">
+  <nav class="adminSide">
+    <button type="button" data-atab="main" class="active">Main</button>
+    <button type="button" data-atab="og" hidden>OG skins</button>
+    <button type="button" data-atab="you" hidden>You</button>
+  </nav>
+  <div class="adminMain">
+  <div class="adminPane" data-apane="main">
   <div class="card" id="adminUpdateCard" hidden>
     <h3 style="margin-top:0">New update</h3>
     <div class="muted small">Switches on everything in the new update for everyone. It's a one-time switch: it can't be turned off again.</div>
@@ -310,6 +325,49 @@
     <h3 style="margin-top:0">⛔ Bans (30 minutes)</h3>
     <div class="row"><input id="adminBanUser" placeholder="Username" maxlength="16"><button type="button" id="adminBanBtn" style="background:#c62828">Ban 30 min</button></div>
     <div id="adminBanList" class="small"></div>
+  </div>
+  </div>
+  <div class="adminPane" data-apane="og" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">OG skins</h3>
+      <div class="muted small">One picture per player. Their "OG skin" quest only shows up once their picture is set. To unlock it they play 50 games, win 10 matchmade Competitive games and pay 1000 points.</div>
+      <div id="adminOgRows"></div>
+    </div>
+  </div>
+  <div class="adminPane" data-apane="you" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">The "you" account</h3><button type="button" class="secondary" id="youRefresh">Refresh</button></div>
+      <div class="muted small">Everything here happens as the you account, the normal way, so it all shows on that account.</div>
+      <div id="youStatus" class="small" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Friends</h3>
+      <div class="row"><input id="youFriendUser" placeholder="Username" maxlength="16"><button type="button" id="youFriendReq">Send request</button><button type="button" class="secondary" id="youFriendForce">Make friends now</button></div>
+      <div id="youFriends" class="small"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Chat</h3>
+      <div class="row"><select id="youChatWith"></select><button type="button" class="secondary" id="youChatLoad">Open</button></div>
+      <div id="youChatList" class="small youChat"></div>
+      <div class="row"><input id="youChatText" placeholder="Message as you" maxlength="200"><button type="button" id="youChatSend">Send</button></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Give the you account</h3>
+      <div class="row"><input id="youGivePts" type="number" min="0" placeholder="Points" style="max-width:120px"><button type="button" id="youGivePtsBtn">Give points</button></div>
+      <div class="row"><select id="youGiveAb"></select><input id="youGiveAbN" type="number" min="1" value="1" style="max-width:80px"><button type="button" id="youGiveAbBtn">Give ability</button></div>
+      <div class="row"><select id="youGiveSk"></select><button type="button" id="youGiveSkBtn">Give skin</button></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Trades</h3>
+      <div class="muted small">Send a trade from the you account (the normal trade fee comes off its points).</div>
+      <div class="row"><input id="youTradeTo" placeholder="To username" maxlength="16"></div>
+      <div class="row small"><b style="width:44px">Give</b><input id="youTGPts" type="number" min="0" placeholder="Points" style="max-width:90px"><select id="youTGAb"></select><select id="youTGSk"></select></div>
+      <div class="row small"><b style="width:44px">Get</b><input id="youTWPts" type="number" min="0" placeholder="Points" style="max-width:90px"><select id="youTWAb"></select><select id="youTWSk"></select></div>
+      <div class="row"><button type="button" id="youTradeSend">Send trade</button></div>
+      <div id="youTrades" class="small"></div>
+    </div>
+  </div>
+  </div>
   </div>
 </div></div>
 

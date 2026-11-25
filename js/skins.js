@@ -167,3 +167,27 @@ function loadCreatorSkins() {
   }).catch(() => { CREATOR = null; return null; }).finally(() => { creatorLoading = null; });
   return creatorLoading;
 }
+
+// ---- OG skins: one picture each for a few original players (uploaded by the admin)
+let OG_SKINS = null, OG_IMG = {}, ogLoading = null;
+function loadOgSkins() {
+  if (OG_SKINS) return Promise.resolve(OG_SKINS);
+  if (!ogLoading) ogLoading = api("ogSkins").then(d => {
+    OG_SKINS = d || {};
+    Object.entries(OG_SKINS).forEach(([u, sk]) => {
+      const id = "og_" + u, im = new Image(); im.src = sk.img; OG_IMG[id] = im;
+      SKINS[id] = { name: sk.name || `${u}'s OG skin`, rarity: "og", pack: "og",
+        draw: (c, x, y, s, base, t) => {
+          const i = OG_IMG[id];
+          if (i && i.complete && i.naturalWidth) c.drawImage(i, x, y, s, s); else _fill(c, x, y, s, base || "#4fc3f7");
+          const k = ((t || 0) / 1400) % 1;      // a gold shine sweeps across
+          c.save(); c.beginPath(); c.rect(x, y, s, s); c.clip();
+          const g = c.createLinearGradient(x + s * (k * 3 - 1.5), y, x + s * (k * 3 - 0.9), y + s);
+          g.addColorStop(0, "rgba(255,215,64,0)"); g.addColorStop(0.5, "rgba(255,235,150,.35)"); g.addColorStop(1, "rgba(255,215,64,0)");
+          c.fillStyle = g; c.fillRect(x, y, s, s); c.restore();
+        } };
+    });
+    return OG_SKINS;
+  }).catch(() => { OG_SKINS = null; return null; }).finally(() => { ogLoading = null; });
+  return ogLoading;
+}

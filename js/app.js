@@ -58,6 +58,11 @@ auth.onAuthStateChanged(async user => {
     }
     setProfile(p);
     if (!inGame && el("banScreen").hidden) showScreen("menuScreen");
+    // "Next level" in Story: the page reloaded, now open that level
+    let nextLv = 0; try { nextLv = +sessionStorage.getItem("cc_next_story") || 0; sessionStorage.removeItem("cc_next_story"); } catch (e) {}
+    if (nextLv && !inGame && el("banScreen").hidden && STORY_LEVELS[nextLv - 1]) openNextStory(nextLv, 4);
+    let again = 0; try { again = +sessionStorage.getItem("cc_next_rogue") || 0; sessionStorage.removeItem("cc_next_rogue"); } catch (e) {}
+    if (again && !nextLv && !inGame && el("banScreen").hidden) enterRoom(async () => rogueRoomKey());
     if (p.tutorialDone === false && !tutAutoShown) { tutAutoShown = true; openTutorial(true, p.tutorialSeenBefore); }
     refreshTrades();
   } catch (e) { el("authErr").textContent = "Couldn't load your account: " + e.message; showScreen("authScreen"); }
@@ -90,8 +95,11 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   if (currentTab === "friends") refreshFriends();
   if (currentTab === "board") refreshBoard();
   if (currentTab === "quests") api("me").then(setProfile).catch(() => {});
+  if (currentTab === "leaders") loadLeaders().then(renderLeaders);
+  if (currentTab === "shop" && PROFILE) renderShop();
   if (currentTab === "weekly" && typeof refreshWeekly === "function") refreshWeekly();
 });
+let ogTried = false;
 function renderAll() {
   if (!PROFILE) return;
   el("whoami").textContent = "👤 " + PROFILE.username;
@@ -99,6 +107,7 @@ function renderAll() {
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
   renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests();
   if (PROFILE.update3 && typeof renderU3 === "function") renderU3();
+  if (!OG_SKINS && !ogTried) { ogTried = true; loadOgSkins().then(d => { if (d && Object.keys(d).length && PROFILE) { renderInventory(); renderQuests(); } }); }
   friendBadge(PROFILE.friendIn || 0, PROFILE.dmUnread || 0);
   showNotices();
 }
@@ -286,6 +295,15 @@ function renderPlay() {
   el("loadoutSummary").innerHTML = !(comp || grind) ? "" :
     `<b>Your loadout:</b> ${lo.length ? lo.map((id, i) => `<kbd>${keyName(abilityKey(i))}</kbd> ${RULES[id].icon} ${RULES[id].name}`).join(" &nbsp; ") : "<span class='muted'>nothing equipped. Buy packs in the Shop, then equip up to 3 in Inventory.</span>"}`;
 }
+// "Next level": if the server is still saving the last win, wait a moment and try again
+async function openNextStory(lv, tries) {
+  showScreen("game");
+  try { await joinGame(storyRoomKey(lv)); }
+  catch (e) {
+    if (/Beat level/.test(e.message) && tries > 0) return void setTimeout(() => openNextStory(lv, tries - 1), 1200);
+    showScreen("menuScreen"); toast(e.message, true);
+  }
+}
 async function enterRoom(getKey) {
   showScreen("game");
   try { const key = await getKey(); await joinGame(key); }
@@ -321,7 +339,7 @@ function renderQuests() {
   const Q = PROFILE.quests; if (!Q) return;
   const ready = Q.list.filter(q => q.progress >= q.target && !q.claimed).length;
   el("questBadge").textContent = ready ? `(${ready})` : "";
-  el("questList").innerHTML = Q.list.map((q, i) => {
+  el("questList").innerHTML = ogQuestHtml() + Q.list.map((q, i) => {
     const pct = Math.round(100 * Math.min(1, q.progress / q.target)), done = q.progress >= q.target;
     const icon = q.kind === "mode" ? (q.mode.startsWith("grind") ? "🤖" : "📖") : QUEST_ICON[q.kind];
     return `<div class="card quest ${q.claimed ? "claimed" : done ? "ready" : ""}"><div class="questTop"><span class="platIcon">${icon}</span>
@@ -330,6 +348,12 @@ function renderQuests() {
       <div class="row" style="justify-content:space-between"><span class="small">${q.progress} / ${q.target}</span>
       ${q.claimed ? `<span class="small" style="color:#7ee787">✅ Claimed</span>` : `<button type="button" data-quest="${i}" ${done ? "" : "disabled"}>Claim ⭐ ${q.reward}</button>`}</div></div>`;
   }).join("");
+  const ogb = el("ogUnlockBtn");
+  if (ogb) ogb.onclick = async () => {
+    if (busy) return; busy = true;
+    try { const r = await api("ogUnlock"); toast("Your OG skin is unlocked!"); playTone(990, 0.3, "triangle", 0.15); setProfile(r); }
+    catch (e) { toast(e.message, true); } finally { busy = false; }
+  };
   document.querySelectorAll("[data-quest]").forEach(b => b.onclick = async () => {
     if (busy) return; busy = true;
     try { const r = await api("questClaim", { i: +b.dataset.quest }); toast(`+${r.reward} points!`); playTone(990, 0.3, "triangle", 0.15); setProfile(r.me); }
@@ -337,6 +361,24 @@ function renderQuests() {
   });
   questClock();
 }
+// the OG skin quest: only for its player, and only once bajajhamish has set their picture
+function ogQuestHtml() {
+  const o = PROFILE.og; if (!o) return "";
+  const g = Math.min(o.games, o.needGames), w = Math.min(o.wins, o.needWins), ready = g >= o.needGames && w >= o.needWins;
+  const bar = (n, of) => `<div class="questBar"><div style="width:${Math.round(100 * n / of)}%"></div></div>`;
+  return `<div class="card quest ogQuest ${o.owned ? "claimed" : ready ? "ready" : ""}"><div class="questTop"><canvas class="skinprev" data-skin="${o.id}" width="46" height="46"></canvas>
+      <div style="flex:1"><b>OG skin</b><div class="muted small">${esc(o.name || "Your OG skin")}. Only you can get this one.</div></div></div>
+    <div class="small">Play games (any kind): ${g} / ${o.needGames}</div>${bar(g, o.needGames)}
+    <div class="small">Win matchmade Competitive games: ${w} / ${o.needWins}</div>${bar(w, o.needWins)}
+    <div class="row" style="justify-content:space-between"><span class="small">Then pay ⭐ ${o.cost}</span>
+    ${o.owned ? `<span class="small" style="color:#7ee787">Unlocked. Wear it from your Inventory.</span>` : `<button type="button" id="ogUnlockBtn" ${ready && (PROFILE.points || 0) >= o.cost ? "" : "disabled"}>Unlock · ⭐ ${o.cost}</button>`}</div></div>`;
+}
+// tiny countdown in the top-left corner of the Free Daily Pack: next leaderboard check (midnight, when quests reset too)
+setInterval(() => {
+  const Q = PROFILE && PROFILE.quests, t = el("lbCheckTimer"); if (!Q || !t) return;
+  const ms = Math.max(0, Q.resetsAt - (Date.now() + clockSkew)), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60;
+  t.textContent = isFinite(ms) ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : "";
+}, 1000);
 function questClock() {
   const Q = PROFILE && PROFILE.quests; if (!Q) return;
   const left = Q.resetsAt - (Date.now() + clockSkew);
@@ -394,7 +436,7 @@ function renderShop() {
   el("abilityPacks").innerHTML = (lucky ? `<div class="warn" style="grid-column:1/-1">🍀 <b>Lucky Event:</b> legendary items are 1.5% more likely!</div>` : "") + Object.entries(ABILITY_PACKS).filter(([, p]) => !p.story || (p.story === 2 ? PROFILE.story2Unlocked : PROFILE.storyUnlocked)).map(([pid, p]) => `
     <div class="pack ${p.story ? "storyPack" : ""}"><div class="packHead">${p.icon} <b>${p.name}</b> ${p.story ? '<span class="tag">boss reward</span>' : ""}</div><div class="muted small">${p.theme}</div>
       <ul>${odds(p.items).map(([id, pct, r]) => `<li>${RULES[id].icon} ${RULES[id].name} ${rarityTag(r)} <span class="muted">${pct}%</span></li>`).join("")}</ul>
-      <button data-buy-ability="${pid}" ${pts < ECON.PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.PACK_COST}</button></div>`).join("");
+      <button data-buy-ability="${pid}" ${pts < ECON.PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.PACK_COST}</button></div>`).join("") + freePackHtml();
   const skinOdds = odds(SKIN_ODDS.map(o => [o[0], o[1], o[0]]));
   el("skinPacks").innerHTML = Object.entries(SKIN_PACKS).filter(([, p]) => !p.story || PROFILE.storyUnlocked).map(([pid, p]) => `
     <div class="pack ${p.story ? "storyPack" : ""}"><div class="packHead">${p.icon} <b>${p.name}</b> ${p.story ? '<span class="tag">boss reward</span>' : ""}</div>
@@ -403,13 +445,19 @@ function renderShop() {
       <button data-buy-skin="${pid}" ${pts < ECON.SKIN_PACK_COST ? "disabled" : ""}>Buy · ⭐ ${ECON.SKIN_PACK_COST}</button></div>`).join("");
   if (PROFILE.update3 && typeof creatorPackHtml === "function") el("skinPacks").innerHTML += creatorPackHtml(pts);
   document.querySelectorAll("[data-buy-creator]").forEach(b => b.onclick = () => buyPack("creator", "creator"));
+  document.querySelectorAll("[data-buy-free]").forEach(b => b.onclick = () => buyPack("lbfree", "free"));
+  if (!LB || Date.now() - LB.got > 120000) { if (!lbLoading) { lbLoading = true; loadLeaders().then(() => { lbLoading = false; if (currentTab === "shop") renderShop(); }); } }
   document.querySelectorAll("[data-buy-ability]").forEach(b => b.onclick = () => buyPack("ability", b.dataset.buyAbility));
   document.querySelectorAll("[data-buy-skin]").forEach(b => b.onclick = () => buyPack("skin", b.dataset.buySkin));
 }
 async function buyPack(kind, pid) {
   if (busy) return;
   busy = true;
-  try { const r = await api("buy", { kind, pack: pid }); showRoll(kind, pid, r.prize, r.rarity, r.count, r.me, r.isSkin, r.near); }
+  try {
+    const r = await api("buy", { kind, pack: pid });
+    if (kind === "lbfree") { if (LB && LB.free) LB.free.left = Math.max(0, LB.free.left - 1); showRoll("ability", r.pack, r.prize, r.rarity, r.count, r.me, r.isSkin, r.near); }
+    else showRoll(kind, pid, r.prize, r.rarity, r.count, r.me, r.isSkin, r.near);
+  }
   catch (e) { toast(e.message, true); busy = false; }
 }
 // Opening a pack: a strip of items spins past and slows down onto yours. Your item (and the two
@@ -593,3 +641,32 @@ el("riskCreateBtn").onclick = () => {
   });
   requestAnimationFrame(previewLoop);
 })();
+
+// ---------------------------------------------------------------- Leaderboard (top 10s) + the free daily pack in the Shop
+let LB = null, lbLoading = false;
+async function loadLeaders() {
+  try { const d = await api("leaderboard"); LB = Object.assign(d, { got: Date.now() }); }
+  catch (e) { if (!LB) LB = { boards: {}, free: { allowed: 0, left: 0 }, got: Date.now() }; if (currentTab === "leaders") toast(e.message, true); }
+  return LB;
+}
+const LB_BOARDS = [["compWins", "Most matchmade wins", "wins"], ["rogueBest", "Best Boss Rush level", "level"], ["points", "Most points now", "points"], ["spent", "Most points spent", "spent"]];
+function renderLeaders() {
+  if (!LB) return;
+  const mine = PROFILE && PROFILE.username;
+  el("lbGrid").innerHTML = LB_BOARDS.map(([k, title, unit]) => {
+    const rows = (LB.boards[k] || []);
+    return `<div class="card"><h3 style="margin:0">${title}</h3><ol class="lbList">${rows.length ? rows.map((r, i) =>
+      `<li class="${r.username === mine ? "me" : ""}"><span>${i + 1}. ${esc(r.username)}</span><b>${unit === "level" ? "Level " + r.value : Number(r.value).toLocaleString()}</b></li>`).join("") : "<li class='muted'>Nobody yet</li>"}</ol></div>`;
+  }).join("");
+  const f = LB.free || { allowed: 0, left: 0 };
+  el("lbNote").innerHTML = (f.allowed ? `You were on the leaderboard at midnight: <b>${f.left}</b> of ${f.allowed} free pack${f.allowed === 1 ? "" : "s"} left (in the Shop). ` : "")
+    + `Free packs are decided next at midnight (Canberra time)${f.nextAt ? ", in " + timeLeft(f.nextAt - Date.now()) : ""}.`;
+}
+function freePackHtml() {
+  const f = LB && LB.free;
+  const on = f && f.allowed > 0, left = on ? f.left : 0;
+  return `<div class="pack freePack"><span id="lbCheckTimer" class="lbCheckTimer" title="Next leaderboard check (midnight)"></span><div class="packHead">🎁 <b>Free Daily Pack</b> <span class="tag">leaderboard</span></div>
+    <div class="muted small">A random ability pack, free. Decided every day at midnight (Canberra time) from the leaderboards right then. ${on ? `You got ${f.allowed} today${f.firsts > 1 ? " for being number 1 on " + f.firsts + " boards" : ""}.` : "Be on any leaderboard at midnight to get one. Number 1 on more than one board gets one for each."}</div>
+    <ul><li class="muted">Opens one of the 5 ability packs at random</li></ul>
+    <button data-buy-free="1" ${on && left > 0 ? "" : "disabled"}>${!f ? "Loading…" : on ? (left > 0 ? `Open free (${left} left)` : "Next ones at midnight") : "Leaderboard only"}</button></div>`;
+}

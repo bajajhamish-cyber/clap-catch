@@ -109,3 +109,118 @@ async function refreshAdmin() {
     document.querySelectorAll("[data-unlucky]").forEach(b => b.onclick = () => adminDo("adminLucky", { username: b.dataset.unlucky, on: false }, "Lucky spin removed"));
   } catch (e) { toast("Couldn't load admin lists: " + e.message, true); }
 }
+
+// ---------------------------------------------------------------- side tabs (Main / OG skins / You)
+// The OG skins and You tabs only appear for bajajhamish after typing L, I, O with the panel open.
+function adminTab(name) {
+  document.querySelectorAll("[data-atab]").forEach(b => b.classList.toggle("active", b.dataset.atab === name));
+  document.querySelectorAll("[data-apane]").forEach(p => p.hidden = p.dataset.apane !== name);
+  if (name === "og") refreshOg();
+  if (name === "you") refreshYou();
+}
+document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => adminTab(b.dataset.atab));
+let secretKeys = "";
+document.addEventListener("keydown", e => {
+  if (el("adminPanel").style.display !== "flex" || !PROFILE || !PROFILE.isOwner || e.repeat) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+  secretKeys = (secretKeys + e.key.toLowerCase()).slice(-3);
+  if (secretKeys === "lio") { document.querySelectorAll('[data-atab="og"], [data-atab="you"]').forEach(b => b.hidden = false); secretKeys = ""; }
+});
+
+// ---------------------------------------------------------------- OG skins (pictures for doom, kythor, cookie_clicker, imsmaat)
+async function refreshOg() {
+  let cur = {};
+  try { cur = await api("ogSkins"); } catch (e) { toast(e.message, true); }
+  el("adminOgRows").innerHTML = OG.USERS.map(u => {
+    const c = cur[u];
+    return `<div class="adminRow creatorRow ogRow"><span class="creatorPrev">${c ? `<img src="${c.img}" alt="">` : "<span class='muted small'>none yet</span>"}</span>
+      <b style="width:110px">${esc(u)}</b>
+      <input type="text" maxlength="24" placeholder="Skin name" data-oname="${u}" value="${c ? esc(c.name) : ""}">
+      <input type="file" accept="image/png,image/jpeg,image/webp" data-ofile="${u}">
+      <button type="button" data-oup="${u}">${c ? "Replace" : "Upload"}</button></div>`;
+  }).join("");
+  document.querySelectorAll("[data-oup]").forEach(b => b.onclick = async () => {
+    const u = b.dataset.oup, f = document.querySelector(`[data-ofile="${u}"]`).files[0], name = document.querySelector(`[data-oname="${u}"]`).value.trim();
+    if (!f) return toast("Pick a picture first", true);
+    try {
+      const img = await shrinkImage(f, 128);
+      await api("ogUpload", { username: u, img, name }); toast(`${u}'s OG skin is set`);
+      OG_SKINS = null; loadOgSkins(); refreshOg();
+    } catch (e) { toast(e.message, true); }
+  });
+}
+
+// ---------------------------------------------------------------- the "you" account (kythor's alt)
+const youApi = (op, args) => api("asYou", { op, args: args || {} });
+let youFriendsData = null;
+function abilityOptions(first) { return `<option value="">${first}</option>` + Object.entries(RULES).filter(([, r]) => r.type === "ability").map(([id, r]) => `<option value="${id}">${esc(r.name)}</option>`).join(""); }
+function skinOptions(first) { return `<option value="">${first}</option>` + SKIN_IDS.filter(id => SKINS[id]).map(id => `<option value="${id}">${esc(SKINS[id].name)}</option>`).join(""); }
+function youFill() {
+  if (el("youGiveAb").options.length) return;
+  el("youGiveAb").innerHTML = abilityOptions("Ability…"); el("youGiveSk").innerHTML = skinOptions("Skin…");
+  el("youTGAb").innerHTML = el("youTWAb").innerHTML = abilityOptions("(no ability)");
+  el("youTGSk").innerHTML = el("youTWSk").innerHTML = skinOptions("(no skin)");
+}
+async function youDo(op, args, msg) {
+  try { const r = await youApi(op, args); if (msg) toast(msg); refreshYou(); return r; } catch (e) { toast(e.message, true); }
+}
+async function refreshYou() {
+  youFill();
+  try {
+    const [fl, tr] = await Promise.all([youApi("friendsList"), youApi("trades")]);
+    youFriendsData = fl;
+    el("youStatus").innerHTML = `Signed in as <b>${esc(fl.username)}</b> · ⭐ ${fl.points} points · ${fl.friends.length} friend${fl.friends.length === 1 ? "" : "s"}`;
+    const row = (f, btns) => `<div class="youRow"><b>${esc(f.username)}</b>${btns}</div>`;
+    el("youFriends").innerHTML =
+      (fl.incoming.length ? "<div class='muted'>Requests to you:</div>" + fl.incoming.map(f => row(f, `<button type="button" data-yacc="${f.uid}">Accept</button><button type="button" class="secondary" data-ydec="${f.uid}">Decline</button>`)).join("") : "")
+      + (fl.outgoing.length ? "<div class='muted'>Sent by you:</div>" + fl.outgoing.map(f => row(f, `<button type="button" class="secondary" data-ycan="${f.uid}">Cancel</button>`)).join("") : "")
+      + (fl.left.length ? "<div class='muted'>Unfriended you:</div>" + fl.left.map(f => row(f, `<button type="button" data-yforce="${esc(f.username)}">Make friends again</button>`)).join("") : "")
+      + "<div class='muted'>Friends:</div>" + (fl.friends.length ? fl.friends.map(f => row(f, `${f.online ? "<span class='muted'>online</span>" : ""}<button type="button" class="secondary" data-ychat="${f.uid}">Chat</button><button type="button" class="secondary" data-yrem="${f.uid}" data-yname="${esc(f.username)}">Remove</button>`)).join("") : "<div class='muted'>None yet.</div>");
+    const sel = el("youChatWith"), was = sel.value;
+    sel.innerHTML = fl.friends.map(f => `<option value="${f.uid}">${esc(f.username)}</option>`).join("");
+    if (was && fl.friends.some(f => f.uid === was)) sel.value = was;
+    document.querySelectorAll("[data-yacc]").forEach(b => b.onclick = () => youDo("friendAnswer", { uid: b.dataset.yacc, accept: true }, "Accepted"));
+    document.querySelectorAll("[data-ydec]").forEach(b => b.onclick = () => youDo("friendAnswer", { uid: b.dataset.ydec, accept: false }, "Declined"));
+    document.querySelectorAll("[data-ycan]").forEach(b => b.onclick = () => youDo("friendCancel", { uid: b.dataset.ycan }, "Cancelled"));
+    document.querySelectorAll("[data-yforce]").forEach(b => b.onclick = () => youDo("forceFriend", { username: b.dataset.yforce }, `You and ${b.dataset.yforce} are friends again`));
+    document.querySelectorAll("[data-yrem]").forEach(b => b.onclick = () => youDo("friendRemove", { uid: b.dataset.yrem }, `Removed ${b.dataset.yname}`));
+    document.querySelectorAll("[data-ychat]").forEach(b => b.onclick = () => { el("youChatWith").value = b.dataset.ychat; youChat(); });
+    // trades
+    const bundle = b => { const out = []; if (b.points) out.push(`⭐ ${b.points}`); Object.entries(b.abilities || {}).forEach(([k, n]) => out.push(`${n}× ${RULES[k] ? RULES[k].name : k}`)); Object.entries(b.skins || {}).forEach(([k, n]) => out.push(`${n}× ${SKINS[k] ? SKINS[k].name : k}`)); return out.join(", ") || "nothing"; };
+    const open = t => t.status === "pending";
+    el("youTrades").innerHTML = [
+      ...tr.incoming.filter(open).map(t => `<div class="youRow"><b>From ${esc(t.fromName)}</b><span>gives ${esc(bundle(t.give))} · wants ${esc(bundle(t.want))}</span><button type="button" data-ytacc="${t.id}">Accept</button><button type="button" class="secondary" data-ytdec="${t.id}">Decline</button></div>`),
+      ...tr.outgoing.filter(open).map(t => `<div class="youRow"><b>To ${esc(t.toName)}</b><span>you give ${esc(bundle(t.give))} · you get ${esc(bundle(t.want))}</span><button type="button" class="secondary" data-ytcan="${t.id}">Cancel</button></div>`),
+    ].join("") || "<div class='muted'>No open trades.</div>";
+    document.querySelectorAll("[data-ytacc]").forEach(b => b.onclick = () => youDo("tradeAnswer", { id: b.dataset.ytacc, accept: true }, "Trade accepted"));
+    document.querySelectorAll("[data-ytdec]").forEach(b => b.onclick = () => youDo("tradeAnswer", { id: b.dataset.ytdec, accept: false }, "Trade declined"));
+    document.querySelectorAll("[data-ytcan]").forEach(b => b.onclick = () => youDo("tradeCancel", { id: b.dataset.ytcan }, "Trade cancelled"));
+  } catch (e) { el("youStatus").textContent = e.message; }
+}
+async function youChat() {
+  const w = el("youChatWith").value; if (!w) return;
+  try {
+    const d = await youApi("dmGet", { with: w });
+    el("youChatList").innerHTML = (d.msgs || []).map(m => `<div class="m ${m.f !== w ? "mine" : ""}">${esc(m.m)}</div>`).join("") || "<div class='muted'>No messages yet.</div>";
+    el("youChatList").scrollTop = 1e6;
+  } catch (e) { toast(e.message, true); }
+}
+el("youRefresh").onclick = refreshYou;
+el("youFriendReq").onclick = () => { const u = el("youFriendUser").value.trim(); if (u) youDo("friendRequest", { username: u }, `Request sent to ${u}`); };
+el("youFriendForce").onclick = () => { const u = el("youFriendUser").value.trim(); if (u) youDo("forceFriend", { username: u }, `You and ${u} are friends now`); };
+el("youChatLoad").onclick = youChat;
+el("youChatWith").onchange = youChat;
+el("youChatSend").onclick = async () => {
+  const w = el("youChatWith").value, text = el("youChatText").value.trim(); if (!w || !text) return;
+  try { await youApi("dmSend", { with: w, text }); el("youChatText").value = ""; youChat(); } catch (e) { toast(e.message, true); }
+};
+el("youChatText").addEventListener("keydown", e => { if (e.key === "Enter") el("youChatSend").click(); });
+el("youGivePtsBtn").onclick = () => { const n = Math.floor(+el("youGivePts").value || 0); if (n > 0) youDo("give", { points: n }, `Gave you ${n} points`); };
+el("youGiveAbBtn").onclick = () => { const a = el("youGiveAb").value, n = Math.floor(+el("youGiveAbN").value || 1); if (a) youDo("give", { ability: a, count: n }, `Gave you ${n}× ${RULES[a].name}`); };
+el("youGiveSkBtn").onclick = () => { const k = el("youGiveSk").value; if (k) youDo("give", { skin: k }, `Gave you ${SKINS[k].name}`); };
+el("youTradeSend").onclick = () => {
+  const side = (p, a, k) => { const b = { points: Math.max(0, Math.floor(+el(p).value || 0)), abilities: {}, skins: {} }; if (el(a).value) b.abilities[el(a).value] = 1; if (el(k).value) b.skins[el(k).value] = 1; return b; };
+  const to = el("youTradeTo").value.trim(); if (!to) return toast("Who to?", true);
+  youDo("tradeSend", { to, give: side("youTGPts", "youTGAb", "youTGSk"), want: side("youTWPts", "youTWAb", "youTWSk") }, `Trade sent to ${to}`);
+};
