@@ -235,9 +235,9 @@ function drawStory(t) {
       if (pos.bend) { c.lineTo(pos.bend.x, pos.bend.y); c.lineTo(b.toX, pos.ty); } else c.lineTo(b.toX, pos.ty);
       c.stroke();
     }
-    // a bomb hits three lanes: show the danger zone once it's close
-    if (b.bomb && p > 0.45 && ga > 0.5) {
-      const Y = st.you.lanes, a = 0.12 + 0.12 * Math.sin(pnow / 60);
+    // a bomb hits three lanes: the red danger zone shows from the moment it's shot until it lands (it never fades to clear)
+    if (b.bomb && ga > 0.5) {
+      const Y = st.you.lanes, a = 0.22 + 0.08 * Math.sin(pnow / 90);
       c.fillStyle = `rgba(255,60,0,${a})`;
       for (let k = b.lane - 1; k <= b.lane + 1; k++) if (Y[k] != null) c.fillRect(st.you.x - 60, Y[k] - 34, 120, 68);
     }
