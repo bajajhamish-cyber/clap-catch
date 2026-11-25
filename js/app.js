@@ -5,7 +5,7 @@
 // ======================================================================
 const EMAIL_DOMAIN = "@clapcatch.game";   // players never see this; it just lets Firebase store username logins
 const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
-let PROFILE = null, pendingSignupName = null, busy = false, tutAutoShown = false;
+let PROFILE = null, pendingSignupName = null, busy = false, tutAutoShown = false, newsAutoShown = false;
 let trades = { incoming: [], outgoing: [] }, riskGames = [];
 
 const el = id => document.getElementById(id);
@@ -64,6 +64,7 @@ auth.onAuthStateChanged(async user => {
     let again = 0; try { again = +sessionStorage.getItem("cc_next_rogue") || 0; sessionStorage.removeItem("cc_next_rogue"); } catch (e) {}
     if (again && !nextLv && !inGame && el("banScreen").hidden) enterRoom(async () => rogueRoomKey());
     if (p.tutorialDone === false && !tutAutoShown) { tutAutoShown = true; openTutorial(true, p.tutorialSeenBefore); }
+    if (p.whatsNew && !newsAutoShown && !inGame) { newsAutoShown = true; el("newsModal").style.display = "flex"; }      // "What's new" page: players who have played before, once
     refreshTrades();
   } catch (e) { el("authErr").textContent = "Couldn't load your account: " + e.message; showScreen("authScreen"); }
 });
@@ -118,6 +119,7 @@ function showNotices() {
   el("noticeList").innerHTML = n.map(x => `<div class="notice ${x.big ? "big" : ""}">${esc(x.msg)}</div>`).join("");
   el("noticeModal").style.display = "flex";
 }
+el("newsClose").onclick = () => { el("newsModal").style.display = "none"; if (PROFILE) PROFILE.whatsNew = false; api("newsSeen").then(setProfile).catch(() => {}); };
 el("noticeClose").onclick = () => { el("noticeModal").style.display = "none"; PROFILE.notices = []; api("noticesSeen").then(setProfile).catch(() => {}); };
 
 // ---------------------------------------------------------------- friends
