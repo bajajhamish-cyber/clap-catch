@@ -274,7 +274,7 @@ function drawStory(t) {
   if (st.type === "boss") { const w = st.wave || 0; info = w <= st.waves ? `Wave ${Math.max(1, Math.min(st.waves, w))} / ${st.waves}` : "Final attack: catch the white ball!"; hint = "Dodge red · clap and catch white"; }
   if (st.balls.some(b => b.bomb)) hint = "Bombs hit 3 lanes: get well clear!";
   else if (st.balls.some(b => b.ghost)) hint = "Ghost balls vanish halfway. Remember where they were going!";
-  else if (st.balls.some(b => b.curve)) hint = "Curve balls turn at the last moment. Watch them!";
+  else if (st.balls.some(b => b.curve)) hint = "Curve balls change lane partway. Watch them!";
   if (st.type === "aim" && st.enemies.some(e => e.shield)) hint = `Wait for the shield to drop, then throw with ${keyName(KEYS.throw)}!`;
   drawFx(c, dt);
   c.restore();
