@@ -180,7 +180,7 @@ const STORY_LEVELS = [
     text: "The leader of the Shadow League. Dodge waves of up to <b>5 dodgeballs</b> across <b>6 lanes</b>. At the end, catch his normal balls to send them back. Hit him <b>7 times</b> to win! If he gets you, you start again from wave 1." },
   // ---------------- World 3: the Founder (only after the update is switched on). Lose any level here and you go back to level 21.
   { world: 3, name: "The Founders' Trial", icon: "🏛️", title: "Level 21: The Founders' Trial",
-    text: "The Shadow League was started by someone: <b>the Founder</b>. To get an audience, beat <b>3 bots</b> (1 hard, 2 super hard) in a normal game." },
+    text: "The Shadow League was started by someone: <b>the Founder</b>. To get an audience, beat <b>3 bots</b> (1 hard, 2 medium) in a normal game." },
   { world: 3, name: "Iron Hands", icon: "🧤", title: "Level 22: Iron Hands",
     text: "<b>4 lanes</b>, very fast balls. Clap and catch <b>14 in a row</b>, then throw it back." },
   { world: 3, name: "Hailstorm", icon: "🌨️", title: "Level 23: Hailstorm",
@@ -201,7 +201,7 @@ const STORY_LEVELS = [
     text: "The one who started it all. Dodge waves of up to <b>6 dodgeballs</b> across <b>7 lanes</b>, then catch his normal balls to send them back. Hit him <b>9 times</b>." },
 ];
 const STORY_W1 = 10, STORY_W2 = 20, STORY_W3 = 30, STORY_VERSION = 3;   // 3: the reset also re-locks the story packs
-const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"], 21: ["hard", "super", "super"] };   // levels that are normal games against bots
+const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"], 21: ["hard", "medium", "medium"] };   // levels that are normal games against bots
 
 // limited packs: only in the shop while their event is on
 const LIMITED_PACKS = {
