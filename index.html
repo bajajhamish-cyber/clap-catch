@@ -274,7 +274,8 @@
   <nav class="adminSide">
     <button type="button" data-atab="main" class="active">Main</button>
     <button type="button" data-atab="ann" id="annTabBtn" hidden>Announcements</button>
-    <button type="button" data-atab="og" hidden>OG skins</button>
+    <button type="button" data-atab="og" id="ogTabBtn" hidden>OG skins</button>
+    <button type="button" data-atab="wheel" hidden>🎡 Wheel</button>
     <button type="button" data-atab="you" hidden>You</button>
   </nav>
   <div class="adminMain">
@@ -360,6 +361,27 @@
     <div class="card">
       <h3 style="margin-top:0">Long announcements up now</h3>
       <div id="annAdminList" class="small"></div>
+    </div>
+  </div>
+  <div class="adminPane" data-apane="wheel" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">🎡 Limited pack wheel</h3>
+      <div class="muted small">Add players, then spin. Whoever it lands on gets a guaranteed top-rarity item from their <b>next limited pack</b>. They aren't told.</div>
+      <div class="row" style="margin-top:8px"><input id="wheelUser" placeholder="Username" maxlength="16" autocomplete="off"><button type="button" id="wheelAddBtn">Add to wheel</button><button type="button" class="secondary" id="wheelClearBtn">Clear</button></div>
+      <div id="wheelPlayers" class="wheelChips"></div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="wheelWrap"><div class="wheelPtr"></div><canvas id="wheelCanvas" width="360" height="360"></canvas></div>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <label class="muted">Prize:</label>
+        <select id="wheelMode"><option value="mythical">Mythical (guaranteed)</option><option value="legendary">Legendary (guaranteed)</option></select>
+        <button type="button" id="wheelSpinBtn">🎡 Spin</button>
+      </div>
+      <div id="wheelResult" class="small" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Waiting for their next limited pack</h3>
+      <div id="wheelPending" class="small"></div>
     </div>
   </div>
   <div class="adminPane" data-apane="og" hidden>

@@ -82,6 +82,7 @@ function shrinkImage(file, size) {
 
 async function refreshAdmin() {
   if (!PROFILE || !PROFILE.isAdmin) return;
+  el("ogTabBtn").hidden = !PROFILE.isOwner;            // the OG skins tab is for bajajhamish only, no secret keys needed
   el("annTabBtn").hidden = !PROFILE.annUnlocked;        // bajajhamish always; kythor once his Announcements quest is done
   if (el("annTabBtn").hidden && document.querySelector('[data-apane="ann"]:not([hidden])')) adminTab("main");
   try {
@@ -113,13 +114,14 @@ async function refreshAdmin() {
 }
 
 // ---------------------------------------------------------------- side tabs (Main / OG skins / You)
-// The OG skins and You tabs only appear for bajajhamish after typing L, I, O with the panel open.
+// The OG skins tab always shows for bajajhamish. The Wheel and You tabs only appear for him after typing L, I, O with the panel open.
 function adminTab(name) {
   document.querySelectorAll("[data-atab]").forEach(b => b.classList.toggle("active", b.dataset.atab === name));
   document.querySelectorAll("[data-apane]").forEach(p => p.hidden = p.dataset.apane !== name);
   if (name === "og") refreshOg();
   if (name === "ann") refreshAnnAdmin();
   if (name === "you") refreshYou();
+  if (name === "wheel") refreshWheel();
 }
 document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => adminTab(b.dataset.atab));
 let secretKeys = "";
@@ -128,7 +130,7 @@ document.addEventListener("keydown", e => {
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
   secretKeys = (secretKeys + e.key.toLowerCase()).slice(-3);
-  if (secretKeys === "lio") { document.querySelectorAll('[data-atab="og"], [data-atab="you"]').forEach(b => b.hidden = false); secretKeys = ""; }
+  if (secretKeys === "lio") { document.querySelectorAll('[data-atab="wheel"], [data-atab="you"]').forEach(b => b.hidden = false); secretKeys = ""; }
 });
 
 // ---------------------------------------------------------------- OG skins (pictures for doom, kythor, cookie_clicker, imsmaat)
@@ -226,4 +228,69 @@ el("youTradeSend").onclick = () => {
   const side = (p, a, k) => { const b = { points: Math.max(0, Math.floor(+el(p).value || 0)), abilities: {}, skins: {} }; if (el(a).value) b.abilities[el(a).value] = 1; if (el(k).value) b.skins[el(k).value] = 1; return b; };
   const to = el("youTradeTo").value.trim(); if (!to) return toast("Who to?", true);
   youDo("tradeSend", { to, give: side("youTGPts", "youTGAb", "youTGSk"), want: side("youTWPts", "youTWAb", "youTWSk") }, `Trade sent to ${to}`);
+};
+
+
+// ---------------------------------------------------------------- the wheel (bajajhamish only, behind L I O)
+const WHEEL_COLORS = ["#ef5f2a", "#2f80ed", "#27ae60", "#9b51e0", "#f2c94c", "#eb5757", "#00a8a8", "#e07bb5"];
+let wheelPlayers = [], wheelRot = 0, wheelSpinning = false;
+function drawWheel() {
+  const c = el("wheelCanvas"), g = c.getContext("2d"), W = c.width, R = W / 2 - 6, n = wheelPlayers.length;
+  g.clearRect(0, 0, W, W); g.save(); g.translate(W / 2, W / 2);
+  if (!n) { g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fillStyle = "#1e2129"; g.fill(); g.strokeStyle = "#3a3f4e"; g.lineWidth = 3; g.stroke();
+    g.fillStyle = "#a3a7b5"; g.font = "600 18px system-ui, sans-serif"; g.textAlign = "center"; g.fillText("Add players", 0, 6); g.restore(); return; }
+  g.rotate(wheelRot);
+  const seg = Math.PI * 2 / n;
+  for (let i = 0; i < n; i++) {
+    g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R, i * seg, (i + 1) * seg); g.closePath();
+    g.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]; g.fill(); g.strokeStyle = "#0b0c0d"; g.lineWidth = 2; g.stroke();
+    g.save(); g.rotate((i + 0.5) * seg); g.textAlign = "right"; g.textBaseline = "middle"; g.fillStyle = "#fff";
+    g.font = `700 ${n > 12 ? 13 : 17}px system-ui, sans-serif`; g.shadowColor = "#000a"; g.shadowBlur = 3;
+    g.fillText(wheelPlayers[i], R - 14, 0); g.restore();
+  }
+  g.beginPath(); g.arc(0, 0, 16, 0, Math.PI * 2); g.fillStyle = "#171a21"; g.fill(); g.strokeStyle = "#ffcc33"; g.lineWidth = 3; g.stroke();
+  g.restore();
+}
+function wheelChips() {
+  el("wheelPlayers").innerHTML = wheelPlayers.length ? wheelPlayers.map(n => `<span class="wheelChip">${esc(n)}<button type="button" data-wrem="${esc(n)}" title="Remove">×</button></span>`).join("") : "<span class='muted small'>Nobody on the wheel yet.</span>";
+  document.querySelectorAll("[data-wrem]").forEach(b => b.onclick = async () => { if (wheelSpinning) return; try { const r = await api("wheelRemove", { username: b.dataset.wrem }); wheelPlayers = r.players; wheelChips(); drawWheel(); } catch (e) { toast(e.message, true); } });
+  el("wheelSpinBtn").disabled = wheelSpinning || wheelPlayers.length < 2;
+}
+async function refreshWheel() {
+  try {
+    const d = await api("wheelGet");
+    if (!wheelSpinning) { wheelPlayers = d.players; wheelChips(); drawWheel(); }
+    el("wheelPending").innerHTML = d.pending.length ? d.pending.map(l =>
+      `<div class="adminRow"><span>${l.mode === "mythical" ? "🔮" : "🌟"} <b>${esc(l.username)}</b> (guaranteed ${l.mode}, waiting for their next limited pack)</span><button type="button" class="secondary" data-wcan="${esc(l.username)}">Cancel</button></div>`).join("") : "<div class='muted'>Nobody right now.</div>";
+    document.querySelectorAll("[data-wcan]").forEach(b => b.onclick = async () => { try { await api("wheelCancel", { username: b.dataset.wcan }); toast("Cancelled"); refreshWheel(); } catch (e) { toast(e.message, true); } });
+  } catch (e) { toast(e.message, true); }
+}
+el("wheelAddBtn").onclick = async () => {
+  const u = el("wheelUser").value.trim(); if (!u || wheelSpinning) return;
+  try { const r = await api("wheelAdd", { username: u }); wheelPlayers = r.players; el("wheelUser").value = ""; wheelChips(); drawWheel(); } catch (e) { toast(e.message, true); }
+};
+el("wheelUser").addEventListener("keydown", e => { if (e.key === "Enter") el("wheelAddBtn").click(); });
+el("wheelClearBtn").onclick = async () => { if (wheelSpinning) return; try { const r = await api("wheelClear"); wheelPlayers = r.players; wheelChips(); drawWheel(); } catch (e) { toast(e.message, true); } };
+el("wheelSpinBtn").onclick = async () => {
+  if (wheelSpinning || wheelPlayers.length < 2) return;
+  const mode = el("wheelMode").value;
+  wheelSpinning = true; el("wheelSpinBtn").disabled = true; el("wheelResult").textContent = "";
+  let r;
+  try { r = await api("wheelSpin", { mode }); } catch (e) { wheelSpinning = false; toast(e.message, true); wheelChips(); return; }
+  wheelPlayers = r.players; wheelChips(); el("wheelSpinBtn").disabled = true;
+  const n = wheelPlayers.length, seg = Math.PI * 2 / n;
+  const land = -Math.PI / 2 - (r.index + 0.5 + (Math.random() - 0.5) * 0.7) * seg;       // puts the winner's slice under the pointer
+  const from = wheelRot, spins = 6 + Math.floor(Math.random() * 3);
+  let to = land - Math.PI * 2 * spins; while (to > from - Math.PI * 2 * 5) to -= Math.PI * 2;
+  const t0 = performance.now(), dur = 5200;
+  await new Promise(done => { (function frame(now) {
+    const t = Math.min(1, (now - t0) / dur), ease = 1 - Math.pow(1 - t, 4);
+    wheelRot = from + (to - from) * ease; drawWheel();
+    if (t < 1) requestAnimationFrame(frame); else done();
+  })(t0); });
+  wheelRot = ((to % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  wheelSpinning = false; drawWheel(); wheelChips();
+  el("wheelResult").innerHTML = `🎉 <b>${esc(r.winner)}</b> won! Their next limited pack will give a guaranteed <b>${r.mode}</b>.`;
+  try { playTone(880, 0.25, "triangle", 0.15); } catch (e) {}
+  refreshWheel();
 };

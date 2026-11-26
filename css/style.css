@@ -431,3 +431,25 @@ body.u3 .annTempBar > div { background: #d6452b; }
 body.u3 .announceBtn { background: none; border: 1px solid #f2c14e; color: #f2c14e; }
 body.u3 .announceBtn:hover { background: #2a2416; }
 body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }
+
+/* admin panel: every field readable (selects/textareas had no text colour, so they came out black on black) */
+#adminPanel input, #adminPanel select, #adminPanel textarea { background: #0b0c0d; color: #f2f2f6; border: 1px solid #3a3f4e; border-radius: 6px; font-size: 16px; padding: 10px 12px; font-family: inherit; }
+#adminPanel select option { background: #0b0c0d; color: #f2f2f6; }
+#adminPanel input::placeholder, #adminPanel textarea::placeholder { color: #8d9198; opacity: 1; }
+#adminPanel input:focus, #adminPanel select:focus, #adminPanel textarea:focus { outline: none; border-color: #ef5f2a; }
+#adminPanel textarea { width: 100%; resize: vertical; }
+#adminPanel input[type=file] { color: #f2f2f6; font-size: 13px; padding: 6px; }
+#adminPanel input[type=file]::file-selector-button { background: #2a2e3a; color: #f2f2f6; border: 0; border-radius: 4px; padding: 6px 10px; margin-right: 8px; cursor: pointer; }
+#adminPanel .card, #adminPanel .card h3, #adminPanel .adminRow, #adminPanel .youRow, #adminPanel b { color: #e8e8ee; }
+#adminPanel .muted { color: #a3a7b5; }
+#adminPanel button:not(.secondary):not(.ghost):not(:disabled) { color: #fff; }
+#adminPanel button.secondary { background: #2e3240; color: #fff; }
+#adminPanel .adminSide button { color: #fff; }
+.youChat .m { color: #e8e8ee; }
+/* wheel */
+.wheelChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.wheelChip { display: inline-flex; align-items: center; gap: 6px; background: #2a2e3a; color: #fff; border-radius: 14px; padding: 3px 4px 3px 10px; font-size: 13px; }
+.wheelChip button { padding: 0 7px; font-size: 14px; line-height: 20px; border-radius: 50%; background: #444; }
+.wheelWrap { position: relative; width: 360px; max-width: 100%; margin: 0 auto; }
+.wheelWrap canvas { width: 100%; height: auto; background: none; border-radius: 50%; cursor: default; }
+.wheelPtr { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 26px solid #ffcc33; z-index: 2; filter: drop-shadow(0 2px 2px #000a); }
