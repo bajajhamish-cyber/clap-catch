@@ -145,7 +145,7 @@ function renderFriends() {
   el("friendList").innerHTML = d.friends.length ? d.friends.slice().sort((a, b) => order(a) - order(b) || a.username.localeCompare(b.username)).map(f => {
     const canJoin = f.game && f.game.type !== "solo" && !(f.game.type === "risk" && f.game.state !== "lobby") && f.game.humans < 6;
     return `<div class="tradeItem"><div><span class="dot ${f.game ? "ingame" : f.online ? "on" : ""}"></span><b>${esc(f.username)}</b>
-      <span class="muted small">${f.game ? gameLabel(f.game) : f.online ? "online" : "offline"}</span></div>
+      <span class="tag">Level ${f.level || 1}</span> <span class="muted small">${f.game ? gameLabel(f.game) : f.online ? "online" : "offline"}</span></div>
       <div class="row">${f.game ? `<button type="button" data-fr-join="${esc(f.uid)}" ${canJoin ? "" : "disabled"}>${canJoin ? "Join" : "Can't join"}</button>` : ""}
       <button type="button" class="secondary small" data-fr-chat="${esc(f.uid)}" data-name="${esc(f.username)}">💬 Chat${f.unread ? ` <span class="unread">${f.unread}</span>` : ""}</button>
       <button type="button" class="ghost small" data-fr-remove="${esc(f.uid)}" data-name="${esc(f.username)}">Remove</button></div></div>`;
@@ -687,7 +687,7 @@ async function loadLeaders() {
   catch (e) { if (!LB) LB = { boards: {}, free: { allowed: 0, left: 0 }, got: Date.now() }; if (currentTab === "leaders") toast(e.message, true); }
   return LB;
 }
-const LB_BOARDS = [["compWins", "Most matchmade wins", "wins"], ["rogueBest", "Best Boss Rush level", "level"], ["points", "Most points now", "points"], ["spent", "Most points spent", "spent"]];
+const LB_BOARDS = [["compWins", "Most matchmade wins", "wins"], ["rogueBest", "Best Boss Rush level", "level"], ["points", "Most points now", "points"], ["spent", "Most points spent", "spent"], ["level", "🏅 Highest level (number 1 gets an extra free pack)", "level"]];
 function renderLeaders() {
   if (!LB) return;
   const mine = PROFILE && PROFILE.username;
@@ -704,7 +704,7 @@ function freePackHtml() {
   const f = LB && LB.free;
   const on = f && f.allowed > 0, left = on ? f.left : 0;
   return `<div class="pack freePack"><span id="lbCheckTimer" class="lbCheckTimer" title="Next leaderboard check (midnight)"></span><div class="packHead">🎁 <b>Free Daily Pack</b> <span class="tag">leaderboard</span></div>
-    <div class="muted small">A random ability pack, free. Decided every day at midnight (Canberra time) from the leaderboards right then. ${on ? `You got ${f.allowed} today${f.firsts > 1 ? " for being number 1 on " + f.firsts + " boards" : ""}.` : "Be on any leaderboard at midnight to get one. Number 1 on more than one board gets one for each."}</div>
+    <div class="muted small">A random ability pack, free. Decided every day at midnight (Canberra time) from the leaderboards right then. ${on ? `You got ${f.allowed} today${f.firsts > 1 ? " for being number 1 on " + f.firsts + " boards" : ""}${f.levelFirst ? (f.firsts > 1 ? ", plus" : " including") + " 1 extra for the highest level" : ""}.` : "Be on any leaderboard at midnight to get one. Number 1 on more than one board gets one for each, and the highest level gets an extra one."}</div>
     <ul><li class="muted">Opens one of the 5 ability packs at random</li></ul>
     <button data-buy-free="1" ${on && left > 0 ? "" : "disabled"}>${!f ? "Loading…" : on ? (left > 0 ? `Open free (${left} left)` : "Next ones at midnight") : "Leaderboard only"}</button></div>`;
 }
