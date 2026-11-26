@@ -301,7 +301,7 @@ const CREATOR_SKINS = ["creator_c", "creator_r", "creator_l"];
 const CREATOR_PACK = { name: "Creator Pack", cost: 300, items: [["creator_c", 60, "common"], ["creator_r", 32, "rare"], ["creator_l", 8, "legendary"]] };
 
 // ---- OG skins: one special skin each for these players (bajajhamish uploads the pictures)
-const OG = { USERS: ["doom", "kythor", "cookie_clicker", "imsmaat"], GAMES: 50, WINS: 10, COST: 1000 };
+const OG = { USERS: ["dooomm", "kythor", "cookie_clicker", "imsmaat"], GAMES: 50, WINS: 10, COST: 1000 };
 // ---- Boss Rush (rogue-like): beat boss after boss; every level is harder. Needs World 3 beaten.
 const ROGUE = { MAX: 250 };
 function rogueReward(level) {             // points for clearing a level (only every 10th level pays)
@@ -335,3 +335,64 @@ const ECON = {
   TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, WHATS_NEW: 1, ADMIN_USERNAME: "bajajhamish", HELPER_USERNAME: "kythor", MAX_PLAYERS: 6,
 };
 
+// ---- Level up system. Everyone starts at level 1. Each level has 3 quests; finish all 3, press Level Up.
+// Quests get harder every level. No quest ever asks you to spend points directly.
+// Level 10 matches the OG skin quest in size: play 50 games, win 10 matchmade Competitive games, open 20 packs (1000 points' worth).
+// Level 20 needs a Mythical item traded away; levels 30, 40, 50 need more. Levels 25, 35, 45 need a Mythical pulled from a pack.
+// A level never has more than one Mythical quest. Some levels have one-off quests (beat a Story level, win a High Risk game...).
+// Level 50 is the last level with its own quests: after that every level repeats the level 50 quests, 15% harder each level.
+const LEVEL = { MAX_UNIQUE: 50, GROWTH: 1.15 };
+const LEVEL_STATS = {
+  play:      { stat: "games",      base: 50,   min: 3,   w: 1,   icon: "🎮", text: n => `Play ${n} games` },
+  compWin:   { stat: "compWins",   base: 10,   min: 1,   w: 1,   icon: "🏆", text: n => `Win ${n} matchmade Competitive game${n === 1 ? "" : "s"}` },
+  elim:      { stat: "elims",      base: 40,   min: 5,   w: 1,   icon: "💥", text: n => `Get ${n} players out` },
+  packs:     { stat: "packs",      base: 20,   min: 2,   w: 1,   icon: "🎁", text: n => `Open ${n} packs` },
+  trade:     { stat: "trades",     base: 5,    min: 1,   w: 1,   icon: "🔁", text: n => `Complete ${n} trade${n === 1 ? "" : "s"} with other players` },
+  hardWin:   { stat: "hardWins",   base: 8,    min: 1,   w: 1,   icon: "🤖", text: n => `Win ${n} Hard Bot Grind round${n === 1 ? "" : "s"}` },
+  riskWin:   { stat: "riskWins",   base: 3,    min: 1,   w: 1,   icon: "🎲", text: n => `Win ${n} High Risk game${n === 1 ? "" : "s"}` },
+  rares:     { stat: "rares",      base: 5,    min: 1,   w: 1,   icon: "💠", text: n => `Get ${n} Rare or better item${n === 1 ? "" : "s"} from packs` },
+  superWin:  { stat: "superWins",  base: 5,    min: 1,   w: 1,   icon: "🤖", text: n => `Win ${n} Super Hard Bot Grind round${n === 1 ? "" : "s"}` },
+  legends:   { stat: "legends",    base: 1,    min: 1,   w: 0.5, icon: "🌟", text: n => `Get ${n} Legendary or better item${n === 1 ? "" : "s"} from packs` },
+  plat:      { stat: "plats",      base: 1,    min: 1,   w: 0.5, icon: "💎", text: n => `Make ${n} Platinum abilit${n === 1 ? "y" : "ies"}` },
+  mythTrade: { stat: "mythTrades", base: 1,    min: 1,   w: 1,   icon: "🔮", text: n => `Trade away ${n} Mythical item${n === 1 ? "" : "s"}` },
+  mythPull:  { stat: "mythPulls",  base: 1,    min: 1,   w: 1,   icon: "🔮", text: n => `Get ${n} Mythical item${n === 1 ? "" : "s"} from a pack` },
+};
+// one-off Story quests (checked against your beaten levels, not counted from the start of the level)
+const LEVEL_STORY = { 5: [5, "Crossfire"], 8: [8, "Moving Target"], 15: [10, "The Boss"] };   // level -> [story level, its name]
+function levelNice(n) { return n >= 1000 ? Math.round(n / 50) * 50 : n >= 100 ? Math.round(n / 5) * 5 : Math.round(n); }
+// the 3 quests for a level: [{ id, stat, target, text, icon, abs }]
+function levelQuests(L) {
+  L = Math.max(1, Math.floor(+L || 1));
+  const e = Math.min(L, LEVEL.MAX_UNIQUE), extra = L > LEVEL.MAX_UNIQUE ? Math.pow(LEVEL.GROWTH, L - LEVEL.MAX_UNIQUE) : 1;
+  const f = Math.max(0.2, Math.pow(e / 10, 1.2)) * extra;     // difficulty: 1.0 at level 10
+  let ids;
+  if (e === 10) ids = ["play", "compWin", "packs"];
+  else if (e === 20) ids = ["compWin", "riskWin", "mythTrade"];
+  else {
+    const g1 = ["play", "compWin", "elim"][e % 3];
+    const o2 = ["packs"]; if (e >= 3) o2.push("hardWin"); if (e >= 6) o2.push("trade"); if (e >= 8) o2.push("riskWin");
+    const g2 = o2[(e + 1) % o2.length];
+    const o3 = ["rares"]; if (e >= 6) o3.push("superWin"); if (e >= 12) o3.push("legends"); if (e >= 16) o3.push("plat");
+    let g3 = o3[e % o3.length];
+    if (e >= 30 && e % 10 === 0) g3 = "mythTrade";
+    else if (e >= 25 && e % 10 === 5) g3 = "mythPull";
+    ids = [g1, g2, g3];
+    if (LEVEL_STORY[e]) ids[2] = "story";
+  }
+  return ids.map(id => {
+    if (id === "story") {
+      const [lv, name] = LEVEL_STORY[e];
+      return { id, stat: "story" + lv, target: 1, text: lv === 10 ? "Beat the Story boss (level 10)" : `Beat Story level ${lv}: ${name}`, icon: "📖", abs: true };
+    }
+    const d = LEVEL_STATS[id];
+    const n = id === "mythTrade" ? Math.max(1, Math.ceil(((e - 10) / 10) * extra - 1e-9))
+      : id === "mythPull" ? Math.max(1, Math.ceil(extra - 1e-9))
+      : Math.max(d.min, levelNice(d.base * d.w * f));
+    return { id, stat: d.stat, target: n, text: d.text(n), icon: d.icon };
+  });
+}
+// points for reaching a level: 100 x, where x = level / 5 rounded down (but rounded up when rounding down would give 0)
+function levelReward(L) {
+  const d = Math.max(1, Math.floor(+L || 1)) / 5, x = Math.floor(d) > 0 ? Math.floor(d) : Math.ceil(d);
+  return 100 * x;
+}

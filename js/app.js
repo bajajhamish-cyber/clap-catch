@@ -95,7 +95,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   if (currentTab === "risk") refreshRisk();
   if (currentTab === "friends") refreshFriends();
   if (currentTab === "board") refreshBoard();
-  if (currentTab === "quests") api("me").then(setProfile).catch(() => {});
+  if (currentTab === "quests" || currentTab === "level") api("me").then(setProfile).catch(() => {});
   if (currentTab === "leaders") loadLeaders().then(renderLeaders);
   if (currentTab === "shop" && PROFILE) renderShop();
   if (currentTab === "weekly" && typeof refreshWeekly === "function") refreshWeekly();
@@ -103,10 +103,10 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 let ogTried = false;
 function renderAll() {
   if (!PROFILE) return;
-  el("whoami").textContent = "👤 " + PROFILE.username;
+  el("whoami").textContent = "👤 " + PROFILE.username + (PROFILE.level ? " · Lv " + PROFILE.level.level : "");
   el("pointsLbl").textContent = "⭐ " + PROFILE.points + " points";
   el("gamePoints").textContent = "⭐ " + PROFILE.points;
-  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests();
+  renderPlay(); renderShop(); renderInventory(); renderTrades(); renderRisk(); renderEvent(); renderPlatinum(); renderQuests(); renderLevel();
   if (PROFILE.update3 && typeof renderU3 === "function") renderU3();
   if (!OG_SKINS && !ogTried) { ogTried = true; loadOgSkins().then(d => { if (d && Object.keys(d).length && PROFILE) { renderInventory(); renderQuests(); } }); }
   friendBadge(PROFILE.friendIn || 0, PROFILE.dmUnread || 0);
@@ -362,6 +362,26 @@ function renderQuests() {
     catch (e) { toast(e.message, true); } finally { busy = false; }
   });
   questClock();
+}
+// ---------------------------------------------------------------- Level up
+function renderLevel() {
+  const L = PROFILE.level; if (!L || !el("levelList")) return;
+  el("levelBadge").textContent = L.ready ? "(!)" : "";
+  el("levelTitle").textContent = "Level " + L.level;
+  el("levelSub").innerHTML = `Finish all 3 quests, then press <b>Level Up</b> to reach level ${L.next} and get <b>⭐ ${L.reward}</b>.`
+    + (L.level >= 50 ? " <span class=\"muted\">Past level 50 the quests don't change, they just get harder every level.</span>" : "");
+  el("levelList").innerHTML = L.quests.map(q => {
+    const pct = Math.round(100 * Math.min(1, q.prog / q.target)), done = q.prog >= q.target;
+    return `<div class="card quest ${done ? "ready" : ""}"><div class="questTop"><span class="platIcon">${q.icon}</span>
+      <div style="flex:1"><b>${esc(q.text)}</b></div></div>
+      <div class="questBar"><div style="width:${pct}%"></div></div>
+      <div class="row" style="justify-content:space-between"><span class="small">${q.prog} / ${q.target}</span>${done ? `<span class="small" style="color:#7ee787">✅ Done</span>` : ""}</div></div>`;
+  }).join("") + `<div class="card"><button type="button" id="levelUpBtn" ${L.ready ? "" : "disabled"}>Level Up · ⭐ ${L.reward}</button></div>`;
+  el("levelUpBtn").onclick = async () => {
+    if (busy) return; busy = true;
+    try { const r = await api("levelUp"); toast(`Level ${r.level}! +${r.reward} points`); playTone(990, 0.3, "triangle", 0.15); setProfile(r.me); }
+    catch (e) { toast(e.message, true); } finally { busy = false; }
+  };
 }
 // the OG skin quest: only for its player, and only once bajajhamish has set their picture
 function ogQuestHtml() {

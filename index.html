@@ -53,6 +53,7 @@
     <button data-tab="friends">Friends <span id="friendBadge"></span></button>
     <button data-tab="board">Board</button>
     <button data-tab="quests">Quests <span id="questBadge"></span></button>
+    <button data-tab="level">Level <span id="levelBadge"></span></button>
     <button data-tab="leaders">Leaderboard</button>
     <button data-tab="weekly" id="weeklyTabBtn" hidden>Weekly Shop</button>
   </div>
@@ -165,6 +166,14 @@
       <div>4 new quests every day. Finish one, then press <b>Claim</b> to get the points. <span class="muted" id="questReset"></span></div>
     </div>
     <div id="questList" class="questList"></div>
+  </div>
+
+  <div id="tab-level" class="tab" hidden>
+    <div class="card platHead">
+      <h2 style="margin:0" id="levelTitle">Level</h2>
+      <div id="levelSub">Finish all 3 quests, then press <b>Level Up</b> for points.</div>
+    </div>
+    <div id="levelList" class="questList"></div>
   </div>
 
   <div id="tab-friends" class="tab" hidden>
