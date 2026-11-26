@@ -47,6 +47,7 @@
     <button data-tab="shop">Shop</button>
     <button data-tab="inv">Inventory</button>
     <button data-tab="limited" id="limitedTabBtn" hidden>Limited</button>
+    <button data-tab="announce" id="announceTabBtn" hidden>Announcements <span id="announceBadge"></span></button>
     <button data-tab="risk">High Risk</button>
     <button data-tab="trade">Trade <span id="tradeBadge"></span></button>
     <button data-tab="platinum">Platinum</button>
@@ -61,6 +62,7 @@
   <div id="eventBanner" class="eventBanner" hidden></div>
 
   <div id="tab-limited" class="tab" hidden><div id="limitedBox"></div></div>
+  <div id="tab-announce" class="tab" hidden><div id="announceBox"></div></div>
 
   <div id="tab-play" class="tab">
     <div class="modes">
@@ -271,6 +273,7 @@
   <div class="adminWrap">
   <nav class="adminSide">
     <button type="button" data-atab="main" class="active">Main</button>
+    <button type="button" data-atab="ann" id="annTabBtn" hidden>Announcements</button>
     <button type="button" data-atab="og" hidden>OG skins</button>
     <button type="button" data-atab="you" hidden>You</button>
   </nav>
@@ -329,6 +332,35 @@
     <div class="row"><input id="adminBanUser" placeholder="Username" maxlength="16"><button type="button" id="adminBanBtn" style="background:#c62828">Ban 30 min</button></div>
     <div id="adminBanList" class="small"></div>
   </div>
+  </div>
+  <div class="adminPane" data-apane="ann" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">📢 New announcement</h3>
+      <div class="annKinds">
+        <button type="button" data-annkind="temp" class="active">Temp announcement</button>
+        <button type="button" data-annkind="long" class="secondary">Long announcement</button>
+      </div>
+      <div id="annTempForm">
+        <div class="muted small">Shows at the top of everyone's screen (menus and games) for <b>10 seconds</b>, then goes away by itself.</div>
+        <input id="annTempText" maxlength="200" placeholder="What do you want to tell everyone?" autocomplete="off">
+        <div class="row"><button type="button" id="annTempSend">Send to everyone</button><span id="annTempCount" class="muted small"></span></div>
+      </div>
+      <div id="annLongForm" hidden>
+        <div class="muted small">Adds an <b>Announcements</b> tab for everyone to read, until the timer runs out or you stop it.</div>
+        <input id="annLongTitle" maxlength="60" placeholder="Title" autocomplete="off">
+        <textarea id="annLongText" maxlength="1500" rows="5" placeholder="Write the announcement…"></textarea>
+        <div class="row">
+          <label class="muted">Lasts</label>
+          <input id="annLongMins" type="number" min="1" value="1" style="max-width:110px">
+          <select id="annLongUnit"><option value="1">minutes</option><option value="60" selected>hours</option><option value="1440">days</option></select>
+          <button type="button" id="annLongSend">Publish</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Long announcements up now</h3>
+      <div id="annAdminList" class="small"></div>
+    </div>
   </div>
   <div class="adminPane" data-apane="og" hidden>
     <div class="card">
@@ -427,6 +459,7 @@
   <div id="keyList"></div>
   <button type="button" class="secondary" onclick="KEYS = Object.assign({}, KEY_DEFAULTS); saveKeys(); renderKeys();">Reset to default</button>
 </div></div>
+<div id="annTemp" hidden><div class="annTempInner"><span class="annTempIcon">📢</span><div class="annTempText"><div id="annTempBy" class="annTempBy"></div><div id="annTempMsg"></div></div></div><div class="annTempBar"><div id="annTempFill"></div></div></div>
 <div id="toast"></div>
 <div id="fxOverlay"></div>
 
@@ -456,6 +489,7 @@
 <script src="js/app.js"></script>
 <script src="js/tutorial.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/announce.js"></script>
 <script src="js/star.js"></script>
 <script src="js/profanity.js"></script>
 <script src="js/extras.js"></script>

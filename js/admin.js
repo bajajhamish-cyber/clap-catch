@@ -82,6 +82,8 @@ function shrinkImage(file, size) {
 
 async function refreshAdmin() {
   if (!PROFILE || !PROFILE.isAdmin) return;
+  el("annTabBtn").hidden = !PROFILE.annUnlocked;        // bajajhamish always; kythor once his Announcements quest is done
+  if (el("annTabBtn").hidden && document.querySelector('[data-apane="ann"]:not([hidden])')) adminTab("main");
   try {
     const d = await api("adminLists");
     adminCfg = d.config;
@@ -116,6 +118,7 @@ function adminTab(name) {
   document.querySelectorAll("[data-atab]").forEach(b => b.classList.toggle("active", b.dataset.atab === name));
   document.querySelectorAll("[data-apane]").forEach(p => p.hidden = p.dataset.apane !== name);
   if (name === "og") refreshOg();
+  if (name === "ann") refreshAnnAdmin();
   if (name === "you") refreshYou();
 }
 document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => adminTab(b.dataset.atab));

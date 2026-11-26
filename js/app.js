@@ -341,7 +341,7 @@ function renderQuests() {
   const Q = PROFILE.quests; if (!Q) return;
   const ready = Q.list.filter(q => q.progress >= q.target && !q.claimed).length;
   el("questBadge").textContent = ready ? `(${ready})` : "";
-  el("questList").innerHTML = ogQuestHtml() + Q.list.map((q, i) => {
+  el("questList").innerHTML = ogQuestHtml() + annQuestHtml() + Q.list.map((q, i) => {
     const pct = Math.round(100 * Math.min(1, q.progress / q.target)), done = q.progress >= q.target;
     const icon = q.kind === "mode" ? (q.mode.startsWith("grind") ? "🤖" : "📖") : QUEST_ICON[q.kind];
     return `<div class="card quest ${q.claimed ? "claimed" : done ? "ready" : ""}"><div class="questTop"><span class="platIcon">${icon}</span>
@@ -354,6 +354,12 @@ function renderQuests() {
   if (ogb) ogb.onclick = async () => {
     if (busy) return; busy = true;
     try { const r = await api("ogUnlock"); toast("Your OG skin is unlocked!"); playTone(990, 0.3, "triangle", 0.15); setProfile(r); }
+    catch (e) { toast(e.message, true); } finally { busy = false; }
+  };
+  const annb = el("annUnlockBtn");
+  if (annb) annb.onclick = async () => {
+    if (busy) return; busy = true;
+    try { const r = await api("annUnlock"); toast("Announcements unlocked!"); playTone(990, 0.3, "triangle", 0.15); setProfile(r); }
     catch (e) { toast(e.message, true); } finally { busy = false; }
   };
   document.querySelectorAll("[data-quest]").forEach(b => b.onclick = async () => {
@@ -392,6 +398,18 @@ function ogQuestHtml() {
     <div class="small">Win matchmade Competitive games: ${w} / ${o.needWins}</div>${bar(w, o.needWins)}
     <div class="row" style="justify-content:space-between"><span class="small">Then pay ⭐ ${o.cost}</span>
     ${o.owned ? `<span class="small" style="color:#7ee787">Unlocked. Wear it from your Inventory.</span>` : `<button type="button" id="ogUnlockBtn" ${ready && (PROFILE.points || 0) >= o.cost ? "" : "disabled"}>Unlock · ⭐ ${o.cost}</button>`}</div></div>`;
+}
+// kythor's quest: same tasks as the OG skin quest but twice the wins. It unlocks the Announcements tab in his admin panel.
+function annQuestHtml() {
+  const o = PROFILE.annQuest; if (!o) return "";
+  const g = Math.min(o.games, o.needGames), w = Math.min(o.wins, o.needWins), ready = g >= o.needGames && w >= o.needWins;
+  const bar = (n, of) => `<div class="questBar"><div style="width:${Math.round(100 * n / of)}%"></div></div>`;
+  return `<div class="card quest ogQuest ${o.owned ? "claimed" : ready ? "ready" : ""}"><div class="questTop"><span class="platIcon">📢</span>
+      <div style="flex:1"><b>Announcements</b><div class="muted small">Unlocks the Announcements tab in your admin panel (press P).</div></div></div>
+    <div class="small">Play games (any kind): ${g} / ${o.needGames}</div>${bar(g, o.needGames)}
+    <div class="small">Win matchmade Competitive games: ${w} / ${o.needWins}</div>${bar(w, o.needWins)}
+    <div class="row" style="justify-content:space-between"><span class="small">Then pay ⭐ ${o.cost}</span>
+    ${o.owned ? `<span class="small" style="color:#7ee787">Unlocked. Find it in the admin panel.</span>` : `<button type="button" id="annUnlockBtn" ${ready && (PROFILE.points || 0) >= o.cost ? "" : "disabled"}>Unlock · ⭐ ${o.cost}</button>`}</div></div>`;
 }
 // tiny countdown in the top-left corner of the Free Daily Pack: next leaderboard check (midnight, when quests reset too)
 setInterval(() => {

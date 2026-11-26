@@ -302,6 +302,9 @@ const CREATOR_PACK = { name: "Creator Pack", cost: 300, items: [["creator_c", 60
 
 // ---- OG skins: one special skin each for these players (bajajhamish uploads the pictures)
 const OG = { USERS: ["dooomm", "kythor", "cookie_clicker", "imsmaat"], GAMES: 50, WINS: 10, COST: 1000 };
+// ---- Announcements (admin panel). Temp ones last 10 seconds; long ones get their own tab until their timer ends or the admin stops them.
+// kythor unlocks the Announcements tab with a quest: the OG skin quest, but twice the wins.
+const ANN = { TEMP_MS: 10000, TEMP_MAX: 200, TITLE_MAX: 60, LONG_MAX: 1500, MAX_LONG: 5, MIN_MINUTES: 1, MAX_MINUTES: 60 * 24 * 30, GAMES: 50, WINS: 20, COST: 1000 };
 // ---- Boss Rush (rogue-like): beat boss after boss; every level is harder. Needs World 3 beaten.
 const ROGUE = { MAX: 250 };
 function rogueReward(level) {             // points for clearing a level (only every 10th level pays)
