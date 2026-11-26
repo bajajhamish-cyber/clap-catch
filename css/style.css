@@ -426,3 +426,8 @@ body.u3 .dm.mine { background: #d6452b; }
 body.u3 #annTemp { background: #1a1c1f; border-color: #d6452b; border-radius: 4px; }
 body.u3 .annTempBy { color: #f2c14e; }
 body.u3 .annTempBar > div { background: #d6452b; }
+.announceBtn { white-space: nowrap; background: #1e2129; border: 1px solid #ffcc33; color: #ffcc33; }
+.announceBtn.active { background: #ffcc33; color: #1b1500; }
+body.u3 .announceBtn { background: none; border: 1px solid #f2c14e; color: #f2c14e; }
+body.u3 .announceBtn:hover { background: #2a2416; }
+body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }

@@ -85,7 +85,18 @@ function tickAnn() {
   if (ANN_DATA.long.some(x => x.endsAt <= now)) { ANN_DATA.long = ANN_DATA.long.filter(x => x.endsAt > now); renderAnnouncements(); renderAnnAdmin(); }
 }
 setInterval(() => { if (PROFILE) tickAnn(); }, 1000);
-el("announceTabBtn").addEventListener("click", () => { annMarkSeen(annLive().map(x => x.id)); el("announceBadge").textContent = ""; });
+// The Announcements button lives in the top bar (not in the tab row), so a long announcement can never push the other tabs onto a second row.
+// It opens the announcements page the same way a tab does.
+el("announceTabBtn").addEventListener("click", () => {
+  currentTab = "announce";
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.hidden = t.id !== "tab-announce");
+  el("announceTabBtn").classList.add("active");
+  annMarkSeen(annLive().map(x => x.id)); el("announceBadge").textContent = "";
+  renderAnnouncements();
+});
+// picking any normal tab leaves the announcements page
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => el("announceTabBtn").classList.remove("active")));
 
 // ---------------------------------------------------------------- admin panel: the Announcements tab
 let annKind = "temp";
