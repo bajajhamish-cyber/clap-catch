@@ -365,18 +365,16 @@ function renderQuests() {
 }
 // ---------------------------------------------------------------- Level up
 function renderLevel() {
-  const L = PROFILE.level; if (!L || !el("levelList")) return;
+  const L = PROFILE.level; if (!L || !el("levelBox")) return;
   el("levelBadge").textContent = L.ready ? "(!)" : "";
-  el("levelTitle").textContent = "Level " + L.level;
-  el("levelSub").innerHTML = `Finish all 3 quests, then press <b>Level Up</b> to reach level ${L.next} and get <b>⭐ ${L.reward}</b>.`
-    + (L.level >= 50 ? " <span class=\"muted\">Past level 50 the quests don't change, they just get harder every level.</span>" : "");
-  el("levelList").innerHTML = L.quests.map(q => {
-    const pct = Math.round(100 * Math.min(1, q.prog / q.target)), done = q.prog >= q.target;
-    return `<div class="card quest ${done ? "ready" : ""}"><div class="questTop"><span class="platIcon">${q.icon}</span>
-      <div style="flex:1"><b>${esc(q.text)}</b></div></div>
-      <div class="questBar"><div style="width:${pct}%"></div></div>
-      <div class="row" style="justify-content:space-between"><span class="small">${q.prog} / ${q.target}</span>${done ? `<span class="small" style="color:#7ee787">✅ Done</span>` : ""}</div></div>`;
-  }).join("") + `<div class="card"><button type="button" id="levelUpBtn" ${L.ready ? "" : "disabled"}>Level Up · ⭐ ${L.reward}</button></div>`;
+  const done = L.quests.filter(q => q.prog >= q.target).length;
+  el("levelBox").innerHTML = `<div class="card levelCard ${L.ready ? "ready" : ""}">
+    <div class="levelHead"><div class="levelBadge"><small>LEVEL</small><b>${L.level}</b></div>
+      <div style="flex:1"><b>Level ${L.level} quests</b><div class="muted small">${done} of 3 done. Finish all 3 to reach level ${L.next}.${L.level >= 50 ? " Past level 50 the quests repeat and get harder every level." : ""}</div></div></div>
+    ${L.quests.map(q => `<div class="levelTask ${q.prog >= q.target ? "done" : ""}"><div class="small"><span>${q.icon} ${esc(q.text)}</span><span>${q.prog >= q.target ? "✅ " : ""}${q.prog} / ${q.target}</span></div>
+      <div class="questBar"><div style="width:${Math.round(100 * Math.min(1, q.prog / q.target))}%"></div></div></div>`).join("")}
+    <div class="levelFoot"><span class="small">Reward for level ${L.next}: ⭐ ${L.reward}</span>
+      <button type="button" id="levelUpBtn" ${L.ready ? "" : "disabled"}>Level Up · ⭐ ${L.reward}</button></div></div>`;
   el("levelUpBtn").onclick = async () => {
     if (busy) return; busy = true;
     try { const r = await api("levelUp"); toast(`Level ${r.level}! +${r.reward} points`); playTone(990, 0.3, "triangle", 0.15); setProfile(r.me); }
