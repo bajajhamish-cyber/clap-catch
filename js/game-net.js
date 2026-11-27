@@ -39,7 +39,7 @@ function joinGame(key) {
   return new Promise(async (resolve, reject) => {
     let settled = false;
     const tok = await token();
-    const url = SERVER.replace(/^http/, "ws") + "/ws/" + key + "?token=" + encodeURIComponent(tok);
+    const url = SERVER.replace(/^http/, "ws") + "/ws/" + key + "?token=" + encodeURIComponent(tok) + (typeof JOIN_EXTRA === "string" ? JOIN_EXTRA : "");
     sock = new WebSocket(url);
     sock.onmessage = ev => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
@@ -77,7 +77,7 @@ function startGameScreen(key) {
   ROOM_KEY = key; inGame = true;
   me.name = players[me.id] ? players[me.id].name : "";
   const sl = /^STORY(\d\d)/.exec(key), gr = /^GRIND([EMHS])/.exec(key), slv = sl ? +sl[1] : 0;
-  $("roomLabel").textContent = /^ROGUE/.test(key) ? "☠️ Boss Rush"
+  $("roomLabel").textContent = /^ROGUE/.test(key) ? "☠️ Boss Rush" : /^CUSTOM/.test(key) ? "🛠️ Level Maker"
     : sl && STORY_LEVELS[slv - 1] ? `📖 Story · ${STORY_LEVELS[slv - 1].world > 1 ? `World ${STORY_LEVELS[slv - 1].world} · ` : ""}Level ${slv}: ${STORY_LEVELS[slv - 1].name}`
     : gr ? `🤖 Bot Grind · 2x ${({ E: "Easy", M: "Medium", H: "Hard", S: "Super Hard" })[gr[1]]} · +${({ E: 5, M: 10, H: 20, S: 40 })[gr[1]]} a win`
     : IS_RISK ? `🎲 High Risk · stake ⭐ ${(ball && ball.stake) || 0}`

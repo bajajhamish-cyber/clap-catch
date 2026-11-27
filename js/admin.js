@@ -29,6 +29,8 @@ el("adminEventBtn").onclick = () => {
   adminDo("adminConfig", { event: id, minutes: mins }, `${EVENTS[id].icon} ${EVENTS[id].name} is on for ${timeLeft(mins * 60000)}`).then(() => api("me").then(setProfile));
 };
 el("adminEventStop").onclick = () => adminDo("adminConfig", { stopEvent: true }, "Event stopped").then(() => api("me").then(setProfile));
+el("adminWorld3Btn").onclick = () => adminDo("adminConfig", { world3: adminCfg.world3 === false }, `Story World 3 is now ${adminCfg.world3 === false ? "ON" : "OFF"}`).then(() => api("me").then(setProfile));
+el("adminWorld4Btn").onclick = () => adminDo("adminConfig", { world4: !adminCfg.world4 }, `Story World 4 is now ${adminCfg.world4 ? "OFF" : "ON"}`).then(() => api("me").then(setProfile));
 el("adminWorld2Btn").onclick = () => adminDo("adminConfig", { world2: !adminCfg.world2 }, `Story World 2 is now ${adminCfg.world2 ? "OFF" : "ON"}`).then(() => api("me").then(setProfile));
 el("adminTeamBtn").onclick = () => adminDo("adminConfig", { antiTeaming: !adminCfg.antiTeaming }, `Anti-teaming is now ${adminCfg.antiTeaming ? "OFF" : "ON"}`);
 
@@ -101,6 +103,12 @@ async function refreshAdmin() {
     el("adminTeamBtn").style.background = adminCfg.antiTeaming ? "#1f6f3a" : "#555";
     el("adminWorld2Btn").textContent = adminCfg.world2 ? "ON" : "OFF";
     el("adminWorld2Btn").style.background = adminCfg.world2 ? "#1f6f3a" : "#555";
+    // World 3: only bajajhamish. World 4: only bajajhamish until he's switched it on once, then kythor too
+    el("adminWorld3Row").hidden = !owner; el("adminWorld4Row").hidden = !(owner || adminCfg.world4Opened);
+    el("adminWorld34").hidden = el("adminWorld3Row").hidden && el("adminWorld4Row").hidden;
+    const w3 = adminCfg.world3 !== false;
+    el("adminWorld3Btn").textContent = w3 ? "ON" : "OFF"; el("adminWorld3Btn").style.background = w3 ? "#1f6f3a" : "#555";
+    el("adminWorld4Btn").textContent = adminCfg.world4 ? "ON" : "OFF"; el("adminWorld4Btn").style.background = adminCfg.world4 ? "#1f6f3a" : "#555";
     el("adminBanList").innerHTML = d.banned.length ? d.banned.map(b =>
       `<div class="adminRow"><span><b>${esc(b.username)}</b> · ${Math.ceil((b.until - Date.now()) / 60000)} min left</span><button type="button" data-unban="${esc(b.username)}">Unban</button></div>`).join("")
       : "<div class='muted'>Nobody is banned.</div>";

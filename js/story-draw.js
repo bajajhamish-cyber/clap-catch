@@ -19,13 +19,15 @@ function storyLevelNow() { return S ? (S.story ? S.story.level : S.storyLevel) :
 // ---------------------------------------------------------------- keys in story levels 2-6
 function storyKey(act, k) {
   const st = S && S.story; if (!st) return false;
+  if (st.type === "arena") return arenaKey(act);
   if (act === "up" || act === "down") {
-    const d = act === "up" ? -1 : 1;
-    if (st.state === "play" && st.you.lanes.length > 1) {
+    const d = (act === "up" ? -1 : 1) * (st.inv && st.inv.until > now() ? -1 : 1);     // controls flipped (World 4): the server flips it too
+    const del = (st.del && st.del.on) || [];
+    if (st.state === "play" && st.you.lanes.length > 1 && !del.includes(shownRow(st) + d)) {
       predRow = Math.max(0, Math.min(st.you.lanes.length - 1, shownRow(st) + d));
       predUntil = performance.now() + 2 * (st.lat || 0) + 300;
     }
-    send({ t: "move", d });
+    send({ t: "move", d: act === "up" ? -1 : 1 });
   }
   else if (act === "left") send({ t: "aim", d: -1 });
   else if (act === "right") send({ t: "aim", d: 1 });
@@ -40,6 +42,7 @@ function storyKey(act, k) {
 function storyWindows() {
   const box = $("storyModal"); if (!box) return;
   if (S.story && S.story.rogue) return rogueWindows(box);
+  if (S.story && S.story.custom) return customWindows(box);
   const lv = storyLevelNow(); if (!lv) { box.style.display = "none"; return; }
   const L = STORY_LEVELS[lv - 1];
   let state;
@@ -64,8 +67,9 @@ function storyWindows() {
     html = `<div class="storyBig">🏆</div><h2>Level ${lv} complete!</h2><p class="storyPts">${pts}</p>
       ${lv === 10 ? `<p>👑 You took your full power back from the boss!${r && r.unlocked ? " New packs are waiting in your Shop: the ⚡ Titan Pack and 3 new skin packs." : ""}${PROFILE && PROFILE.world2 ? " But who was giving him orders? World 2 is open…" : ""}</p>` : ""}
       ${lv === 20 ? `<p>🦹 The Captain is beaten and the Shadow League is finished!${r && r.unlocked ? " The 🌑 Shadow Pack is in your Shop, and you now get 2 extra daily quests." : ""}${PROFILE && PROFILE.update3 ? " But someone started the Shadow League…" : ""}</p>` : ""}
-      ${lv === 30 ? `<p>The Founder is beaten.${r && r.unlocked ? " The Weekly Shop and the Creator Pack are now unlocked." : ""}</p>` : ""}
-      <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) || (lv >= 20 && lv < 30 && PROFILE && PROFILE.world2 && PROFILE.update3) ? `<button type="button" id="storyNext" ${r ? "" : "disabled"}>${r ? "Next level ▶" : "Saving…"}</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
+      ${lv === 30 ? `<p>The Founder is beaten.${r && r.unlocked ? " The Weekly Shop and the Creator Pack are now unlocked." : ""}${PROFILE && PROFILE.world4 ? " But something else is in the game now…" : ""}</p>` : ""}
+      ${lv === 40 ? `<p>You beat you. It isn't gone: it's in the game now, helping you build.${r && r.unlocked ? " The <b>Level Maker</b> is unlocked: make your own levels and play everyone else's." : ""}</p>` : ""}
+      <div class="row" style="justify-content:center">${lv < 10 || (lv >= 10 && lv < 20 && PROFILE && PROFILE.world2) || (lv >= 20 && lv < 30 && PROFILE && PROFILE.world2 && PROFILE.update3) || (lv >= 30 && lv < 40 && PROFILE && PROFILE.world4) ? `<button type="button" id="storyNext" ${r ? "" : "disabled"}>${r ? "Next level ▶" : "Saving…"}</button>` : ""}<button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
   } else {
     html = `<div class="storyBig">💥</div><h2>Not this time</h2><p>${escHtml((S.story && S.story.reason) || "The bots won this one.")}</p>
       <div class="row" style="justify-content:center"><button type="button" id="storyRetry">Try again</button><button type="button" class="secondary" id="storyMenu">Back to menu</button></div>`;
@@ -81,6 +85,24 @@ function storyWindows() {
     try { sessionStorage.setItem("cc_next_story", String(lv + 1)); } catch (e) {}
     $("leaveBtn").click();
   };
+}
+
+// ---------------------------------------------------------------- Level Maker levels
+function customWindows(box) {
+  const st = S.story, key = "custom:" + st.state;
+  if (key === storyShownState) return;
+  storyShownState = key;
+  let html = "";
+  const name = escHtml(st.custom);
+  if (st.state === "intro") html = `<div class="storyBig">🛠️</div><h2>${name}</h2><p class="muted small">A level from the Level Maker. No points, just for fun.</p><button type="button" id="storyGo">Let's go!</button>`;
+  else if (st.state === "won") html = `<div class="storyBig">🏆</div><h2>You beat "${name}"!</h2><div class="row" style="justify-content:center"><button type="button" id="storyRetry">Play again</button><button type="button" class="secondary" id="storyMenu">Back</button></div>`;
+  else if (st.state === "lost") html = `<div class="storyBig">💥</div><h2>Not this time</h2><p>${escHtml(st.reason || "")}</p><div class="row" style="justify-content:center"><button type="button" id="storyRetry">Try again</button><button type="button" class="secondary" id="storyMenu">Back</button></div>`;
+  else { box.style.display = "none"; return; }
+  box.querySelector(".box").innerHTML = html; box.style.display = "flex";
+  const go = $("storyGo"), retry = $("storyRetry"), menu = $("storyMenu");
+  if (go) go.onclick = () => { box.style.display = "none"; send({ t: "go" }); };
+  if (retry) retry.onclick = () => { box.style.display = "none"; storyShownState = ""; send({ t: "retry" }); };
+  if (menu) menu.onclick = () => { box.style.display = "none"; try { sessionStorage.setItem("cc_open_maker", "1"); } catch (e) {} $("leaveBtn").click(); };
 }
 
 // ---------------------------------------------------------------- Boss Rush windows
@@ -150,15 +172,16 @@ function ghostAlpha(p) { return p < 0.26 ? 1 : p < 0.34 ? 1 - (p - 0.26) / 0.08 
 
 // ---------------------------------------------------------------- the side-on arena
 function drawStory(t) {
+  if (S.story.type === "arena") return drawArena(t);
   const st = S.story, c = ctx, lat = st.lat || 0;
   c.clearRect(0, 0, 960, 640);
   const g = c.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, "#151821"); g.addColorStop(1, "#1d2230"); c.fillStyle = g; c.fillRect(0, 0, 960, 640);
   c.strokeStyle = "#2a3040"; c.setLineDash([8, 12]); c.lineWidth = 2; c.beginPath(); c.moveTo(480, 60); c.lineTo(480, 600); c.stroke(); c.setLineDash([]);
-  const L = st.rogue ? { icon: "☠️", world: 0, name: "Boss Rush" } : STORY_LEVELS[st.level - 1];
+  const L = st.rogue ? { icon: "☠️", world: 0, name: "Boss Rush" } : st.custom ? { icon: "🛠️", world: 0, name: st.custom } : STORY_LEVELS[st.level - 1];
   c.font = "bold 18px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#c9b8ff";
-  c.fillText(st.rogue ? `☠️ Boss Rush · Level ${st.rogue}` : `${L.icon} ${L.world > 1 ? `World ${L.world} · ` : ""}Level ${st.level}: ${L.name}`, 16, 30);
+  c.fillText(st.rogue ? `☠️ Boss Rush · Level ${st.rogue}` : st.custom ? `🛠️ Level Maker · ${st.custom}` : `${L.icon} ${L.world > 1 ? `World ${L.world} · ` : ""}Level ${st.level}: ${L.name}`, 16, 30);
   // smooth gliding between lanes
-  const lvKey = st.rogue ? "R" + st.rogue : st.level;
+  const lvKey = st.rogue ? "R" + st.rogue : st.custom ? "C" + st.custom : st.level;
   if (storyLevelShown !== lvKey) { storyLevelShown = lvKey; glide = {}; predRow = null; bossSeen = {}; phaseSeen = -1; }
   const pnow = performance.now(), dt = Math.min(0.1, (pnow - (glideAt || pnow)) / 1000); glideAt = pnow;
   c.save();
@@ -179,7 +202,16 @@ function drawStory(t) {
     c.strokeStyle = "rgba(255,255,255,.07)"; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 50, y); c.lineTo(x + 50, y); c.stroke();
     c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2); c.fill();
   });
-  dots(st.you.x, st.you.lanes);
+  // deleted lanes (World 4): about to go = flashing red outline; gone = red static
+  const del = st.del || { on: [], warn: [] };
+  del.warn.forEach(k => { const y = st.you.lanes[k]; if (y == null) return; const left = Math.max(0, (del.at - now()) / 1000);
+    if (Math.floor(pnow / 120) % 2) { c.strokeStyle = "#ff1744"; c.lineWidth = 3; c.strokeRect(st.you.x - 90, y - 32, 180, 64); }
+    c.font = "bold 13px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#ff5252"; c.fillText(`DELETING ${left.toFixed(1)}`, st.you.x, y - 38); });
+  del.on.forEach(k => { const y = st.you.lanes[k]; if (y == null) return;
+    c.fillStyle = "rgba(120,0,20,.75)"; c.fillRect(st.you.x - 90, y - 32, 180, 64);
+    for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(255,${Math.random() * 80},${Math.random() * 80},${Math.random() * 0.6})`; c.fillRect(st.you.x - 90 + Math.random() * 176, y - 32 + Math.random() * 60, 4, 3); }
+    c.font = "bold 14px monospace"; c.textAlign = "center"; c.fillStyle = "#fff"; c.fillText("[DELETED]", st.you.x, y + 5); });
+  dots(st.you.x, st.you.lanes.filter((_, k) => !del.on.includes(k)));
   st.enemies.forEach(e => { if (!e.boss && e.lanes.length > 1) dots(e.x, e.lanes); });
   // aiming (levels 4 and 5)
   const myRow = shownRow(st), yy = ease("you", st.you.lanes[myRow]);
@@ -241,6 +273,20 @@ function drawStory(t) {
       c.fillStyle = `rgba(255,60,0,${a})`;
       for (let k = b.lane - 1; k <= b.lane + 1; k++) if (Y[k] != null) c.fillRect(st.you.x - 60, Y[k] - 34, 120, 68);
     }
+    if (b.fake && !mine) {                     // a fake: it falls apart into pixels and disappears
+      const k = Math.min(1, Math.max(0, (p - 0.65) / 0.1));
+      if (!splitSeen["f" + b.id]) { splitSeen["f" + b.id] = 1; burst(pos.x, pos.y, 18, ["#9e9e9e", "#e53935", "#fff"], 140); }
+      c.globalAlpha = 0.5 * (1 - k); c.save(); c.translate(pos.x, pos.y); ballShape(c, "dodge", 20); c.restore(); c.globalAlpha = 1; return;
+    }
+    if (b.glitch && !mine && ga > 0.5) {         // a glitch: copies flicker in other lanes (only the solid one is real)
+      const Y = st.you.lanes, seed = b.id * 7919, f = Math.floor(pnow / 90);
+      [1, 2].forEach(j => {
+        const l = (b.lane + j * 2 + (seed >> j)) % Y.length; if (l === b.lane || (f + j) % 3 === 0) return;
+        c.globalAlpha = 0.28 + 0.12 * Math.sin(pnow / 40 + j); c.save(); c.translate(pos.x + (Math.random() - 0.5) * 6, Y[l] + (pos.y - Y[b.lane]) * 0); ballShape(c, "dodge", 20); c.restore();
+      });
+      c.globalAlpha = 1;
+      c.fillStyle = "rgba(0,255,255,.35)"; c.fillRect(pos.x - 14 + (Math.random() - 0.5) * 8, pos.y - 2, 28, 3);
+    }
     if (ga <= 0.02) { c.globalAlpha = 0.07; c.fillStyle = "#fff"; c.beginPath(); c.arc(pos.x, pos.y, 4, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; return; }
     c.globalAlpha = ga;
     c.save(); c.translate(pos.x, pos.y); c.rotate(performance.now() / 150);
@@ -271,6 +317,8 @@ function drawStory(t) {
   else if (st.balls.some(b => b.ghost)) hint = "Ghost balls vanish halfway. Remember where they were going!";
   else if (st.balls.some(b => b.curve)) hint = "Curve balls change lane partway. Watch them!";
   if (st.type === "aim" && st.enemies.some(e => e.shield)) hint = `Wait for the shield to drop, then throw with ${keyName(KEYS.throw)}!`;
+  if (st.balls.some(b => b.glitch)) hint = "Glitched balls show fake copies. Only the solid one is real!";
+  if (del.warn.length) hint = "A lane is about to be deleted: get out of it!";
   drawFx(c, dt);
   c.restore();
   if (pnow < flashUntil) { c.globalAlpha = Math.min(0.6, (flashUntil - pnow) / 400); c.fillStyle = flashCol; c.fillRect(0, 0, 960, 640); c.globalAlpha = 1; }
@@ -279,10 +327,38 @@ function drawStory(t) {
     const k = (now() - st.phaseAt) / 2200, slide = Math.min(1, k * 5), out = k > 0.8 ? (k - 0.8) / 0.2 : 0;
     c.globalAlpha = 1 - out; c.fillStyle = "rgba(0,0,0,.7)"; c.fillRect(0, 250, 960, 110);
     c.font = "bold 46px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = st.phase >= 3 ? "#ff5252" : "#ffd54f";
-    c.fillText(st.phase >= 3 ? "FINAL ATTACK" : `PHASE ${st.phase + 1}`, 480 - (1 - slide) * 600, 312);
+    const you = st.enemies[0] && st.enemies[0].look === "you", last = you ? 4 : 3;
+    c.fillText(st.phase >= last ? "FINAL ATTACK" : `PHASE ${st.phase + 1}`, 480 - (1 - slide) * 600, 312);
     c.font = "16px Nunito, system-ui"; c.fillStyle = "#fff";
-    c.fillText(st.phase === 1 ? "Curve balls!" : st.phase === 2 ? "Bombs, ghosts and curves!" : "Catch the white ball!", 480 + (1 - slide) * 600, 342);
+    const sub = you ? ["", "your controls are mine now.", "deleting lanes. deleting you.", "i was never really gone.", "Catch the white ball!"] : ["", "Curve balls!", "Bombs, ghosts and curves!", "Catch the white ball!"];
+    c.fillText(sub[st.phase] || "", 480 + (1 - slide) * 600, 342);
     c.globalAlpha = 1;
+  }
+  // flipped controls
+  const inv = st.inv || {};
+  if (inv.on) {
+    c.fillStyle = "rgba(156,39,176,.18)"; c.fillRect(0, 0, 960, 640);
+    c.fillStyle = "rgba(0,0,0,.6)"; c.fillRect(330, 66, 300, 36);
+    c.font = "bold 18px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = "#e1bee7"; c.fillText(`⇅ CONTROLS FLIPPED ${Math.max(0, (inv.until - now()) / 1000).toFixed(1)}`, 480, 90);
+  } else if (inv.warnAt && inv.warnAt > now()) {
+    c.font = "bold 18px Nunito, system-ui"; c.textAlign = "center"; c.fillStyle = Math.floor(pnow / 150) % 2 ? "#e1bee7" : "#9c27b0";
+    c.fillText(`Controls flip in ${((inv.warnAt - now()) / 1000).toFixed(1)}…`, 480, 90);
+  }
+  // the fake crash (World 4 boss)
+  if (st.crashUntil && now() < st.crashUntil) {
+    const left = st.crashUntil - now();
+    c.fillStyle = "#000"; c.fillRect(0, 0, 960, 640);
+    if (left > 700) {
+      c.fillStyle = "#1e1e1e"; c.fillRect(260, 220, 440, 190); c.strokeStyle = "#555"; c.lineWidth = 1; c.strokeRect(260, 220, 440, 190);
+      c.fillStyle = "#c62828"; c.beginPath(); c.arc(300, 270, 16, 0, Math.PI * 2); c.fill(); c.fillStyle = "#fff"; c.font = "bold 20px system-ui"; c.textAlign = "center"; c.fillText("!", 300, 277);
+      c.textAlign = "left"; c.font = "bold 18px system-ui"; c.fillText("Clap Catch stopped working", 330, 268);
+      c.font = "14px system-ui"; c.fillStyle = "#bbb"; c.fillText("Connection lost. Reconnecting" + ".".repeat(1 + Math.floor(pnow / 400) % 3), 330, 296);
+      c.fillText("Error 0x00YOU: player not found", 330, 320);
+      c.fillStyle = "#333"; c.fillRect(300, 350, 360, 8); c.fillStyle = "#4fc3f7"; c.fillRect(300, 350, 360 * (1 - left / 3200), 8);
+    } else {
+      for (let i = 0; i < 26; i++) { c.fillStyle = `hsl(${Math.random() * 360},90%,55%)`; c.fillRect(0, Math.random() * 640, 960, 2 + Math.random() * 10); }
+      c.font = "bold 54px monospace"; c.textAlign = "center"; c.fillStyle = "#7fff00"; c.fillText("just kidding.", 480 + (Math.random() - 0.5) * 12, 330);
+    }
   }
   c.font = "bold 16px Nunito, system-ui"; c.textAlign = "left"; c.fillStyle = "#ffd54f"; c.fillText(info, 16, 56);
   c.textAlign = "center"; c.fillStyle = "#cfd3e0"; c.font = "15px Nunito, system-ui"; c.fillText(hint, 480, 625);
@@ -300,7 +376,7 @@ function ballShape(c, kind, s, b) {
 function drawBoss(c, e, t, st, pnow) {
   pnow = pnow || performance.now();
   const seen = bossSeen[e.id] || (bossSeen[e.id] = { hp: e.hp, alive: e.alive, hitAt: 0, deadAt: e.alive ? 0 : 1 });
-  const x0 = e.x, s = 190, angry = e.hp <= 2, cap = e.look === "captain", founder = e.look === "founder", maxHp = e.maxHp || 5;
+  const x0 = e.x, s = 190, angry = e.hp <= 2, cap = e.look === "captain", founder = e.look === "founder", you = e.look === "you", maxHp = e.maxHp || 5;
   if (e.hp < seen.hp) {                     // got hit
     seen.hitAt = pnow; shake(260, 9);
     burst(x0 - 60, 320, 26, founder ? ["#ffd54f", "#fff", "#c9a227"] : cap ? ["#4dd0e1", "#fff", "#e53935"] : ["#ce93d8", "#fff", "#ffd54f"], 300);
@@ -315,7 +391,7 @@ function drawBoss(c, e, t, st, pnow) {
   const y = 320 + Math.sin(pnow / 520) * 7 + deadK * 160;
   // aura
   if (e.alive) {
-    const pulse = 0.5 + 0.5 * Math.sin(pnow / (angry ? 120 : 300)), col = founder ? "255,213,79" : cap ? "77,208,225" : "186,104,200";
+    const pulse = 0.5 + 0.5 * Math.sin(pnow / (angry ? 120 : 300)), col = you ? "127,255,0" : founder ? "255,213,79" : cap ? "77,208,225" : "186,104,200";
     const gr = c.createRadialGradient(x, y, s * 0.3, x, y, s * 0.95); gr.addColorStop(0, `rgba(${col},${0.25 + 0.25 * pulse})`); gr.addColorStop(1, `rgba(${col},0)`);
     c.fillStyle = gr; c.fillRect(x - s, y - s, s * 2, s * 2);
     if (founder && st && st.phase >= 2) { c.strokeStyle = `rgba(255,82,82,${0.4 + 0.4 * pulse})`; c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(x, y, s * 0.62 + i * 14 + (pnow / 20) % 14, 0, Math.PI * 2); c.stroke(); } }
@@ -324,6 +400,27 @@ function drawBoss(c, e, t, st, pnow) {
   c.translate(x, y); c.rotate(deadK * 0.6); const sc = (1 - deadK * 0.5) * (1 + hitK * 0.08); c.scale(sc * (1 + hitK * 0.06), sc * (1 - hitK * 0.06)); c.translate(-x, -y);
   if (!e.alive) c.globalAlpha = Math.max(0.15, 0.6 - deadK * 0.45);
   c.fillStyle = "rgba(0,0,0,.4)"; c.fillRect(x - s / 2 + 8, y - s / 2 + 10, s, s);
+  if (you) {           // "you": a player's cube that came alive: dark screen, green pixel face, glitching
+    c.fillStyle = "#0b0f0b"; c.fillRect(x - s / 2, y - s / 2, s, s);
+    c.strokeStyle = "#7fff00"; c.lineWidth = 4; c.strokeRect(x - s / 2, y - s / 2, s, s);
+    for (let i = 0; i < 12; i++) { c.fillStyle = "rgba(127,255,0,.06)"; c.fillRect(x - s / 2, y - s / 2 + i * 16, s, 7); }
+    const px = (gx, gy, w, h) => { c.fillRect(x + gx * 10, y + gy * 10, w * 10, h * 10); };
+    c.fillStyle = angry ? "#ff1744" : "#7fff00";
+    const look = Math.sin(pnow / 700) > 0.6 ? 1 : 0;
+    px(-5 + look, -4, 3, 3); px(2 + look, -4, 3, 3);                        // eyes
+    if (e.alive) { px(-4, 3, 8, 1); px(-5, 2, 1, 1); px(4, 2, 1, 1); } else { px(-3, 3, 6, 1); }
+    c.font = "bold 22px monospace"; c.textAlign = "center"; c.fillStyle = "#7fff00"; c.fillText("you", x, y + s / 2 - 14);
+    if (Math.random() < (angry ? 0.35 : 0.15)) {                             // glitch slices
+      for (let i = 0; i < 3; i++) { const yy = y - s / 2 + Math.random() * s, h = 4 + Math.random() * 14; c.drawImage(c.canvas, x - s / 2, yy, s, h, x - s / 2 + (Math.random() - 0.5) * 30, yy, s, h); }
+    }
+    if (hitK > 0) { c.globalAlpha = hitK * 0.8; c.fillStyle = "#fff"; c.fillRect(x - s / 2, y - s / 2, s, s); }
+    c.globalAlpha = 1; c.restore();
+    c.fillStyle = "#111"; c.fillRect(x0 - 100, 40, 200, 22);
+    const seg2 = 196 / maxHp;
+    for (let i = 0; i < maxHp; i++) { c.fillStyle = i < e.hp ? "#7fff00" : "#3a3d46"; c.fillRect(x0 - 96 + i * seg2, 44, seg2 - 3, 14); }
+    c.font = "bold 14px monospace"; c.textAlign = "center"; c.fillStyle = "#7fff00"; c.fillText("> you", x0, 34);
+    return;
+  }
   const g = c.createLinearGradient(x, y - s / 2, x, y + s / 2);
   g.addColorStop(0, founder ? "#eceff1" : cap ? "#263238" : "#6a1b9a"); g.addColorStop(1, founder ? "#90a4ae" : cap ? "#0d1117" : "#311b92"); c.fillStyle = g; c.fillRect(x - s / 2, y - s / 2, s, s);
   if (founder) {      // the Founder: pale stone with a gold band and a key mark

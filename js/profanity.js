@@ -1,5 +1,5 @@
 // copy of server/src/profanity.js for the website (the server checks again anyway)
-const badName = (() => {
+const [badName, cleanChat] = (() => {
 // ======================================================================
 //  profanity.js: cleans chat messages on the server (so nobody can skip it)
 //  Swear words and slurs become ***. Catches l33t speak (sh1t), symbols
@@ -45,5 +45,5 @@ function badName(name) {
   return parts.length > 1 && parts.some(x => x.length <= 2) && bad(joined);
 }
 
-return badName;
+return [badName, cleanChat];
 })();

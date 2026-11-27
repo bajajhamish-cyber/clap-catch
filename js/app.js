@@ -62,6 +62,8 @@ auth.onAuthStateChanged(async user => {
     let nextLv = 0; try { nextLv = +sessionStorage.getItem("cc_next_story") || 0; sessionStorage.removeItem("cc_next_story"); } catch (e) {}
     if (nextLv && !inGame && el("banScreen").hidden && STORY_LEVELS[nextLv - 1]) openNextStory(nextLv, 4);
     let again = 0; try { again = +sessionStorage.getItem("cc_next_rogue") || 0; sessionStorage.removeItem("cc_next_rogue"); } catch (e) {}
+    let maker = 0; try { maker = +sessionStorage.getItem("cc_open_maker") || 0; sessionStorage.removeItem("cc_open_maker"); } catch (e) {}
+    if (maker && !inGame && PROFILE.story4Unlocked) setTimeout(() => openMaker(), 300);
     if (again && !nextLv && !inGame && el("banScreen").hidden) enterRoom(async () => rogueRoomKey());
     let miniAgain = 0; try { miniAgain = +sessionStorage.getItem("cc_mini_again") || 0; sessionStorage.removeItem("cc_mini_again"); } catch (e) {}
     loadMiniInfo().then(() => { if (miniAgain && !inGame && el("banScreen").hidden) playMini(); });
@@ -101,6 +103,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   if (currentTab === "leaders") loadLeaders().then(renderLeaders);
   if (currentTab === "shop" && PROFILE) renderShop();
   if (currentTab === "weekly" && typeof refreshWeekly === "function") refreshWeekly();
+  if (currentTab === "maker") makerShown();
 });
 let ogTried = false;
 function renderAll() {
@@ -164,7 +167,7 @@ function friendBadge(requests, unread) {
   el("friendBadge").textContent = requests + unread ? `(${requests + unread})` : "";
 }
 // chatting with a friend: the server keeps the last 10 messages between you two
-let dmWith = null, dmTimer = null, dmLastSig = "";
+let dmWith = null, dmTimer = null, dmLastSig = "", dmTick = 0;
 async function openDm(uid, name) {
   dmWith = uid; dmLastSig = "";
   el("dmTitle").textContent = "💬 " + name;
@@ -172,7 +175,7 @@ async function openDm(uid, name) {
   el("dmModal").style.display = "flex"; el("dmInput").value = ""; el("dmInput").focus();
   await loadDm();
   const f = friendData.friends.find(x => x.uid === uid); if (f && f.unread) { f.unread = 0; renderFriends(); }
-  clearInterval(dmTimer); dmTimer = setInterval(() => { if (!document.hidden) loadDm(); }, 4000);
+  clearInterval(dmTimer); dmTick = 0; dmTimer = setInterval(() => { if (!document.hidden && (!HUB_OK || ++dmTick % 8 === 0)) loadDm(); }, 4000);   // with the hub, new messages are pushed
 }
 function closeDm() { dmWith = null; clearInterval(dmTimer); el("dmModal").style.display = "none"; refreshFriends(); }
 async function loadDm(data) {
@@ -244,6 +247,7 @@ function renderEvent() {
   document.body.classList.toggle("ev-golden", !!ev && ev.id === "golden");
   document.body.classList.toggle("ev-blackout", !!ev && ev.id === "blackout");
   el("limitedTabBtn").hidden = !ev;
+  el("makerTabBtn").hidden = !PROFILE.story4Unlocked;   // beating World 4 unlocks the Level Maker tab
   el("eventBanner").hidden = !ev;
   if (!ev && currentTab === "limited") document.querySelector('.tabs button[data-tab="play"]').click();
   if (!ev) { el("limitedBox").innerHTML = ""; return; }
@@ -268,16 +272,18 @@ function renderEvent() {
   document.querySelectorAll("[data-buy-limited]").forEach(b => b.onclick = () => buyPack("limited", b.dataset.buyLimited));
 }
 setInterval(() => { if (PROFILE && !inGame) renderEvent(); }, 1000);
-setInterval(() => { if (PROFILE && !inGame && !document.hidden) api("me").then(setProfile).catch(() => {}); }, 45000);   // notice events starting/stopping
+setInterval(() => { if (PROFILE && !inGame && !document.hidden && (!HUB_OK || Date.now() - HUB_LAST_ME > 300000)) { HUB_LAST_ME = Date.now(); api("me").then(setProfile).catch(() => {}); } }, 45000);   // notice events starting/stopping
 // keep lists fresh while you're looking at them
+let listTick = 0;
 setInterval(() => {
   if (!PROFILE || inGame || document.hidden) return;
+  if (HUB_OK && ++listTick % 5) return;   // with the hub: every 30s instead of 6s (friends/trades also refresh when poked)
   if (currentTab === "trade") refreshTrades();
   if (currentTab === "risk") refreshRisk();
   if (currentTab === "friends") refreshFriends();
   if (currentTab === "board") refreshBoard();
 }, 6000);
-setInterval(() => { if (PROFILE && !inGame && !document.hidden) refreshTrades(); }, 30000);
+setInterval(() => { if (PROFILE && !inGame && !document.hidden && !HUB_OK) refreshTrades(); }, 30000);
 
 // ---------------------------------------------------------------- play
 let chosenMode = "casual";
@@ -330,7 +336,9 @@ function renderStory() {
     html += `<h3 class="worldHead">🌒 World 2: The Shadow League</h3>`
       + (done.includes(STORY_W1) ? w2.map((L, i) => row(L, i + STORY_W1)).join("") : `<div class="muted small">🔒 Beat the World 1 boss (level 10) to open World 2.</div>`)
       + (PROFILE.story2Unlocked ? `<div class="muted small" style="margin-top:8px">🦹 You beat the Captain! The Shadow Pack is in your Shop and you get 2 extra daily quests.</div>` : "");
-    if (PROFILE.update3 && typeof storyW3Html === "function") html += storyW3Html(row);
+    if (PROFILE.update3 && PROFILE.world3 !== false && typeof storyW3Html === "function") html += storyW3Html(row);
+    if (PROFILE.update3 && PROFILE.world3 !== false && PROFILE.world4 && typeof storyW4Html === "function") html += storyW4Html(row);
+    if (PROFILE.update3 && typeof bossRushHtml === "function") html += bossRushHtml();      // always at the bottom
   }
   el("storyLevels").innerHTML = html;
   document.querySelectorAll("[data-story]").forEach(b => b.onclick = () => enterRoom(async () => storyRoomKey(+b.dataset.story)));

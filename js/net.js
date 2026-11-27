@@ -4,6 +4,7 @@
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const SERVER = (window.CC_SERVER || SERVER_URL).replace(/\/$/, "");
+let HUB_OK = false, HUB_LAST_ME = 0;   // set by hub.js while the quiet push connection is up
 
 async function token() {
   const u = auth.currentUser;

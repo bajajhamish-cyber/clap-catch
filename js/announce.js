@@ -13,9 +13,11 @@ let ANN_DATA = { temp: null, long: [] };
 let annTempShown = 0, annTempTimer = null, annBusy = false, annFails = 0, annNextTry = 0;
 
 // ---------------------------------------------------------------- asking the server
-async function pollAnn() {
+let annLast = 0;
+async function pollAnn(force) {
   if (!PROFILE || annBusy || document.hidden || Date.now() < annNextTry) return;
-  annBusy = true;
+  if (HUB_OK && force !== true && Date.now() - annLast < 300000) return;   // the hub pokes us when there's a new one
+  annBusy = true; annLast = Date.now();
   try { applyAnn(await api("annGet")); annFails = 0; }
   catch (e) { annFails = Math.min(annFails + 1, 5); annNextTry = Date.now() + ANN_POLL_MS * Math.pow(2, annFails); }   // back off if the server isn't answering
   finally { annBusy = false; }
@@ -29,8 +31,8 @@ function applyAnn(d) {
   };
   showTemp(); renderAnnouncements(); renderAnnAdmin();
 }
-setInterval(pollAnn, ANN_POLL_MS);
-setTimeout(pollAnn, 1500);
+setInterval(() => pollAnn(), ANN_POLL_MS);
+setTimeout(() => pollAnn(), 1500);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) pollAnn(); });
 
 // ---------------------------------------------------------------- temp announcement (10-second banner)

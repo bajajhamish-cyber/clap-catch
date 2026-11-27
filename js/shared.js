@@ -222,8 +222,29 @@ const STORY_LEVELS = [
     text: "<b>5 lanes</b>, fast balls, and every ball is a <b>curve ball</b>: it heads for one lane, then turns into another. Be in the lane it ends up in. Clap and catch <b>12 in a row</b>, then throw it back with <b>Space</b>." },
   { world: 3, name: "The Founder", icon: "🗝️", title: "Level 30: The Founder",
     text: `The one who started it all. Dodge waves of up to <b>6 dodgeballs</b> across <b>7 lanes</b>, in <b>3 phases</b>: plain balls first, then <b>curve balls</b>, then <b>bombs, ghosts and curves</b> all mixed. At the end, he throws normal balls in the only safe lane: clap and catch them to send them back. Hit him <b>9 times</b> to win! If he gets you, you start again from wave 1.` },
+  // ---------------- World 4: "you" (off until bajajhamish switches it on)
+  { world: 4, name: "Strange Signal", icon: "📡", title: "Level 31: Strange Signal",
+    text: `With the Founder gone, something else is in the game. Something that calls itself <b>you</b>. <b>5 lanes</b> of dodgeballs, and some are <b>glitched</b>: they flicker and leave fake copies of themselves in other lanes. Only the solid one is real. Survive every wave with ${SK_MOVE}, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 4, name: "Wrong Way", icon: "🔄", title: "Level 32: Wrong Way",
+    text: "you has learned how to <b>flip your controls</b>. Every few seconds, up becomes down and down becomes up for a while. A warning flashes first. <b>4 lanes</b>: clap and catch <b>10 in a row</b>, then throw it back." },
+  { world: 4, name: "Deleted", icon: "🗑️", title: "Level 33: Deleted",
+    text: `you starts <b>deleting lanes</b>. A lane flashes red, then it's gone for a few seconds: be in it when it goes and you're out, and you can't move into it while it's gone. <b>6 lanes</b> of dodgeballs. Survive every wave with ${SK_MOVE}, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 4, name: "Is It Real?", icon: "❓", title: "Level 34: Is It Real?",
+    text: `Some dodgeballs are <b>fakes</b>: they look real until most of the way, then vanish. You can't tell which until late, but there's always a lane that's safe from real <b>and</b> fake balls. <b>6 lanes</b>. Survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 4, name: "Firewall", icon: "🔥", title: "Level 35: Firewall",
+    text: "you hides behind a <b>firewall</b> (a shield that's only down for a moment) and moves between <b>4 lanes</b>. And your aim controls <b>flip</b> now and then too. Aim with <b>A</b>/<b>D</b>, throw with <b>Space</b>. You have <b>6 balls</b>." },
+  { world: 4, name: "Corrupted", icon: "👾", title: "Level 36: Corrupted",
+    text: `Two copies of you attack from both sides across <b>5 lanes</b>, with <b>glitched</b> and <b>fake</b> dodgeballs. Catch their normal balls, then aim with <b>A</b>/<b>D</b>, throw with <b>Space</b>, and hit both copies.` },
+  { world: 4, name: "Upside Down", icon: "🙃", title: "Level 37: Upside Down",
+    text: `<b>Curve balls</b> and <b>flipped controls</b> together. <b>5 lanes</b>, up to <b>3 dodgeballs</b>. Survive every wave, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 4, name: "Low Memory", icon: "💾", title: "Level 38: Low Memory",
+    text: "<b>5 lanes</b>, <b>ghost balls</b>, and lanes keep getting <b>deleted</b>. The ball is never thrown into a deleted lane. Clap and catch <b>12 in a row</b>, then throw it back." },
+  { world: 4, name: "Overclock", icon: "⚡", title: "Level 39: Overclock",
+    text: `Everything at once: <b>7 lanes</b>, up to <b>5 dodgeballs</b>, curve balls, ghosts, bombs, glitches, fakes and deleted lanes, for <b>12 waves</b>. There's always one safe lane. Survive, then catch the normal ball, press <b>T</b> and throw it back.` },
+  { world: 4, name: "you", icon: "🤖", title: "Level 40: you",
+    text: `<b>you</b> has become sentient, and it wants to be the one playing. This is the hardest fight in the game: <b>40 waves</b> across <b>7 lanes</b> in <b>4 phases</b>. Glitches and fakes, then flipped controls, then deleted lanes and bombs, then… something goes very wrong. Don't close the game. At the end, catch its normal balls to send them back. Hit it <b>12 times</b> to win! If it gets you, you start again from wave 1.` },
 ];
-const STORY_W1 = 10, STORY_W2 = 20, STORY_W3 = 30, STORY_VERSION = 3;   // 3: the reset also re-locks the story packs
+const STORY_W1 = 10, STORY_W2 = 20, STORY_W3 = 30, STORY_W4 = 40, STORY_VERSION = 3;   // 3: the reset also re-locks the story packs
 const STORY_BOTS = { 1: ["easy", "easy", "easy"], 11: ["medium", "hard", "hard"], 21: ["hard", "medium", "medium"] };   // levels that are normal games against bots
 
 // limited packs: only in the shop while their event is on
@@ -425,6 +446,115 @@ function levelReward(L) {
   return 100 * x;
 }
 
+// ---- Level Maker (the World 4 reward). A level is a few settings packed into a share code (nothing is stored
+// unless someone publishes it). Both the site and the server use these, and the server always re-checks a code.
+const LMAKER = {
+  TYPES: ["dodge", "catch", "boss"],
+  LIMITS: { lanes: [3, 7], speed: [0.6, 1.4], waves: [3, 20], maxBalls: [1, 5], need: [3, 20], hp: [2, 15], bossWaves: [10, 40] },
+  MODS: ["curve", "ghost", "bomb", "split", "glitch", "fake"],
+  SLOTS: 3,                 // published levels per player
+  NAME_MAX: 24,
+  NEWEST: 50, TOP: 20,      // how many show in the Newest / Most liked lists
+  PICKS: { owner: 3, helper: 2 },   // Admin's choice: 3 picked by bajajhamish, 2 by kythor
+};
+const lmClamp = (v, [a, b], d) => { v = Number(v); return Number.isFinite(v) ? Math.max(a, Math.min(b, v)) : d; };
+// turns whatever someone typed/sent into a safe level config the story engine can run
+function levelClean(x) {
+  x = x && typeof x === "object" ? x : {};
+  const L = LMAKER.LIMITS, type = LMAKER.TYPES.includes(x.t) ? x.t : "dodge";
+  const n = Math.round(lmClamp(x.l, L.lanes, 5)), top = n >= 6 ? 100 : n === 5 ? 110 : 150, bot = n >= 6 ? 540 : n === 5 ? 530 : 520;
+  const mods = {}; LMAKER.MODS.forEach(k => { const v = Math.round(lmClamp(x.m && x.m[k], [0, 100], 0)); if (v) mods[k] = v / 100; });
+  const out = { n: String(x.n || "Custom level").replace(/[<>&"]/g, "").slice(0, LMAKER.NAME_MAX) || "Custom level", t: type, l: n,
+    s: Math.round(lmClamp(x.s, L.speed, 1) * 100) / 100, m: Object.keys(mods).length ? Object.fromEntries(Object.entries(mods).map(([k, v]) => [k, Math.round(v * 100)])) : undefined,
+    inv: x.inv ? 1 : 0, del: x.del ? 1 : 0 };
+  const cfg = { type, lanes: [n, top, bot], start: Math.floor(n / 2), speed: out.s, enemy: out.n, mods: type === "catch" ? {} : mods, custom: out.n };
+  if (type === "dodge") {
+    out.w = Math.round(lmClamp(x.w, L.waves, 8)); out.b = Math.round(lmClamp(x.b, L.maxBalls, 3));
+    const mx = Math.min(out.b, n - 1);
+    cfg.waves = Array.from({ length: out.w }, (_, i) => Math.max(1, Math.min(mx, 1 + Math.floor(i * mx / out.w))));
+  }
+  if (type === "catch") {
+    out.k = Math.round(lmClamp(x.k, L.need, 10)); cfg.need = out.k;
+    cfg.normalMods = {}; if (mods.ghost) cfg.normalMods.ghost = mods.ghost; if (mods.curve) cfg.normalMods.curve = mods.curve;
+  }
+  if (type === "boss") {
+    out.h = Math.round(lmClamp(x.h, L.hp, 5)); out.w = Math.round(lmClamp(x.w, L.bossWaves, 20)); out.b = Math.round(lmClamp(x.b, L.maxBalls, 4));
+    Object.assign(cfg, { name: out.n, hp: out.h, waves: out.w, maxBalls: Math.min(out.b, n - 1), perStep: Math.max(1, Math.ceil(out.w / Math.min(out.b, n - 1))), look: "boss",
+      hits: ["Ow!", "Hey!", "Stop!", "Grr…", "No!"], end: "You beat my level!" });
+  }
+  if (out.inv) cfg.invert = { every: 7000, for: 3500, warn: 1200 };
+  if (out.del) cfg.del = { every: 7500, for: 3500, n: 1, warn: 1600 };
+  return { cfg, data: out };
+}
+function b64(s) { return typeof btoa === "function" ? btoa(unescape(encodeURIComponent(s))) : Buffer.from(s, "utf8").toString("base64"); }
+function unb64(s) { return typeof atob === "function" ? decodeURIComponent(escape(atob(s))) : Buffer.from(s, "base64").toString("utf8"); }
+// ---- "Build your own" levels (Level Maker v2): dots you move between, arrows for W/S, enemies anywhere.
+//  Grid is 48 x 30 squares (20px each on a 960 x 640 screen, 20px from the top).
+//  Code format: { v:2, n:name, p:[[x,y]..] dots, a:[next dot or -1 for each dot], st:start dot,
+//    e:[{ n,x,y, m:[[x,y]..] path, ms:speed, r:ms between shots, wh:% white, a:"you"|"rand"|"pat", pt:[dot..], t:[[sec,text]..] }],
+//    k: white catches to win (0 = survive instead), w: seconds to survive, l: lives, sp: ball speed, i: intro line }
+const ARENA = { GX: 48, GY: 30, DOTS: 16, ENEMIES: 6, WPTS: 6, LINES: 4, LINE_MAX: 60, PAT: 12, CLEAR: 2,
+  LIMITS: { k: [0, 30], w: [10, 300], l: [1, 5], sp: [0.6, 1.6], ms: [0, 8], r: [500, 6000], wh: [0, 100] } };
+const arenaPx = (x, y) => [x * 20, 20 + y * 20];
+function segDist(p, a, b) {                  // distance from point p to the line a-b (grid squares)
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+  const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+function arenaClean(x) {
+  x = x && typeof x === "object" ? x : {};
+  const A = ARENA, L = A.LIMITS, int = (v, lo, hi, d) => Math.round(lmClamp(v, [lo, hi], d));
+  const pt = q => Array.isArray(q) ? [int(q[0], 0, A.GX, 0), int(q[1], 0, A.GY, 0)] : null;
+  const txt = (s, n) => String(s || "").replace(/[<>&"]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
+  const dots = [];
+  (Array.isArray(x.p) ? x.p : []).slice(0, A.DOTS).forEach(q => { const d = pt(q); if (d && dots.every(o => Math.hypot(o[0] - d[0], o[1] - d[1]) >= 1.5)) dots.push(d); });
+  if (!dots.length) dots.push([6, 15]);
+  // arrows: every dot has at most one arrow out (W) and one arrow in (S)
+  const next = dots.map(() => -1), taken = new Set();
+  (Array.isArray(x.a) ? x.a : []).forEach((to, i) => { to = Math.round(Number(to)); if (i < dots.length && to >= 0 && to < dots.length && to !== i && !taken.has(to)) { next[i] = to; taken.add(to); } });
+  const clear = q => dots.every(d => Math.hypot(d[0] - q[0], d[1] - q[1]) >= A.CLEAR);
+  const enemies = [];
+  (Array.isArray(x.e) ? x.e : []).slice(0, A.ENEMIES).forEach(e => {
+    if (!e || typeof e !== "object") return;
+    const at = pt([e.x, e.y]); if (!clear(at)) return;              // enemies can't stand on your dots
+    const path = [at];
+    for (const q of (Array.isArray(e.m) ? e.m : []).slice(0, A.WPTS)) {  // ...or walk through them
+      const w = pt(q); if (!w || !clear(w) || dots.some(d => segDist(d, path[path.length - 1], w) < A.CLEAR)) break;
+      path.push(w);
+    }
+    const aim = ["you", "rand", "pat"].includes(e.a) ? e.a : "you";
+    const pat = (Array.isArray(e.pt) ? e.pt : []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < dots.length).slice(0, A.PAT);
+    enemies.push({ n: txt(e.n, 16) || "Enemy " + (enemies.length + 1), x: at[0], y: at[1], m: path.slice(1), ms: Math.round(lmClamp(e.ms, L.ms, 3) * 10) / 10,
+      r: int(e.r, L.r[0], L.r[1], 2000), wh: int(e.wh, 0, 100, 40), a: aim === "pat" && !pat.length ? "you" : aim, pt: aim === "pat" ? pat : [],
+      t: (Array.isArray(e.t) ? e.t : []).slice(0, A.LINES).map(l => Array.isArray(l) ? [int(l[0], 0, 600, 0), txt(l[1], A.LINE_MAX)] : null).filter(l => l && l[1]) });
+  });
+  if (!enemies.length) enemies.push({ n: "Enemy 1", x: 40, y: 15, m: [], ms: 0, r: 2000, wh: 40, a: "you", pt: [], t: [] });
+  if (!clear([enemies[0].x, enemies[0].y])) { enemies[0].x = 46; enemies[0].y = 2; }
+  return { v: 2, n: txt(x.n, LMAKER.NAME_MAX) || "Custom level", p: dots, a: next, st: int(x.st, 0, dots.length - 1, 0), e: enemies,
+    k: int(x.k, 0, 30, 5), w: int(x.w, 10, 300, 45), l: int(x.l, 1, 5, 3), sp: Math.round(lmClamp(x.sp, L.sp, 1) * 100) / 100, i: txt(x.i, A.LINE_MAX) };
+}
+// where an enemy is after ms milliseconds: walks its path and back again (ping-pong)
+function arenaPos(e, ms) {
+  const pts = [[e.x, e.y], ...(e.m || [])];
+  if (pts.length < 2 || !e.ms) return pts[0];
+  const seg = []; let tot = 0;
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); tot += d; }
+  if (!tot) return pts[0];
+  let s = (ms / 1000 * e.ms) % (2 * tot); if (s > tot) s = 2 * tot - s;
+  for (let i = 0; i < seg.length; i++) { if (s <= seg[i] || i === seg.length - 1) { const f = seg[i] ? Math.min(1, s / seg[i]) : 0; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f]; } s -= seg[i]; }
+  return pts[0];
+}
+function levelToCode(x) { const d = x && x.v === 2 ? arenaClean(x) : levelClean(x).data; return "CC4-" + b64(JSON.stringify(d)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function levelFromCode(code) {        // null if it isn't a real level code
+  try {
+    code = String(code || "").trim();
+    if (!/^CC4-[A-Za-z0-9_-]{8,6000}$/.test(code)) return null;
+    const raw = code.slice(4).replace(/-/g, "+").replace(/_/g, "/");
+    const x = JSON.parse(unb64(raw + "===".slice((raw.length + 3) % 4)));
+    if (x && x.v === 2) { const d = arenaClean(x); return { data: d, cfg: { type: "arena", custom: d.n, arena: d } }; }
+    return levelClean(x);
+  } catch (e) { return null; }
+}
 // ---- Daily minigame: one each day (changes at midnight Canberra time), in this order. Admins can pick the next one.
 const MINI = {
   ORDER: ["color", "ultra", "duel", "tag", "clicker"],

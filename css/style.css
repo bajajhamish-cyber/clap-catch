@@ -487,3 +487,42 @@ body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }
 .clickUp { display: block; width: 100%; text-align: left; position: relative; margin-bottom: 6px; background: #1e2129; }
 .clickCost { position: absolute; right: 10px; top: 10px; font-weight: 700; }
 @media (max-width: 700px) { #clickerUI { grid-template-columns: 1fr; } }
+
+/* ---------------- Level Maker ---------------- */
+.makerBox { width: 760px; max-width: 96vw; max-height: 92vh; overflow: auto; }
+.makerTabs { display: flex; gap: 6px; margin: 10px 0; }
+.makerTabs button { background: #1e2129; }
+.makerTabs button.active { background: #ef5f2a; }
+.makerGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 16px; margin: 8px 0; }
+.makerGrid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.makerGrid label[hidden] { display: none; }
+.makerBox .chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+#mkCode { flex: 1; font-family: monospace; font-size: 12px; }
+.mkList { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.mkRow { display: flex; gap: 8px; align-items: center; background: #1e2129; padding: 6px 10px; border-radius: 6px; }
+.mkRow .mkName { flex: 1; }
+.mkRow button { padding: 6px 10px; }
+/* Level Maker tab */
+#makerModal.makerBox { width: auto; max-width: none; max-height: none; overflow: visible; display: flex; flex-direction: column; gap: 10px; }
+#makerModal .mkList { max-height: 460px; overflow-y: auto; }
+#makerModal select { background: #100f15; color: inherit; border: 1px solid #36324a; border-radius: 8px; padding: 8px; font-family: inherit; font-size: 14px; }
+#makerModal input[type=checkbox] { width: auto; }
+#mkCode { flex: 1; font-size: 12px; }
+#makerModal .makerTabs button { background: #2b2f3a; color: #cfd3dc; }
+#makerModal .makerTabs button.active { background: #ef5f2a; color: #fff; }
+#makerModal .chk input { flex: none; margin: 0; } #makerModal .chk { margin-right: 18px; }
+
+/* the tab bar: one row on computers (buttons shrink to fit). Phones keep wrapping onto more rows, like before */
+@media (min-width: 761px) {
+  .tabs, body.u3 .tabs { flex-wrap: nowrap; }
+  .tabs button, body.u3 .tabs button { flex: 1 1 auto; min-width: 0; padding: 9px 4px; font-size: 13.5px; white-space: nowrap; }
+}
+/* Level Maker: Build your own */
+.mkModes, .mkTools { display: flex; gap: 6px; flex-wrap: wrap; }
+#makerModal .mkModes button, #makerModal .mkTools button[data-tool] { background: #2b2f3a; color: #cfd3dc; }
+#makerModal .mkModes button.active, #makerModal .mkTools button.active { background: #ef5f2a; color: #fff; }
+#arCanvas { width: 100%; height: auto; max-width: none; border-radius: 10px; cursor: crosshair; touch-action: none; }
+.mkEnemy { background: #171a21; }
+#arLines .row { margin: 4px 0; }
+#arLines input.sec { width: 70px; flex: none; }
+#arLines input.sec { flex: 0 0 70px; width: 70px; }

@@ -56,6 +56,7 @@
     <button data-tab="quests">Quests <span id="questBadge"></span></button>
     <button data-tab="level">Level <span id="levelBadge"></span></button>
     <button data-tab="leaders">Leaderboard</button>
+    <button data-tab="maker" id="makerTabBtn" hidden>Level Maker</button>
     <button data-tab="weekly" id="weeklyTabBtn" hidden>Weekly Shop</button>
   </div>
 
@@ -155,6 +156,74 @@
     <div id="diaList" class="platList"></div>
   </div>
 
+<div id="tab-maker" class="tab" hidden><div id="makerModal" class="card makerBox">
+  <div><h2 style="margin:0">Level Maker</h2><div class="muted small">Make your own levels, share them with a code, and play everyone else's. Unlocked by beating World 4.</div></div>
+  <div class="makerTabs"><button type="button" data-mk="make" class="active">Make</button><button type="button" data-mk="browse">Play levels</button><button type="button" data-mk="mine">My levels</button></div>
+  <div data-mkpane="make">
+    <div class="mkModes"><button type="button" data-mkmode="build" class="active">Build your own</button><button type="button" data-mkmode="quick">Quick level</button></div>
+    <div id="mkBuild">
+      <div class="mkTools">
+        <button type="button" data-tool="dot" class="active" title="Click to put a dot you can stand on">● Dots</button>
+        <button type="button" data-tool="arrow" title="Click a dot, then the dot W should take you to">➜ Arrows</button>
+        <button type="button" data-tool="start" title="Click the dot you start on">⚑ Start</button>
+        <button type="button" data-tool="enemy" title="Click to add an enemy (or select one)">■ Enemies</button>
+        <button type="button" data-tool="path" title="Click to add stops to the selected enemy's walk">⋯ Walk path</button>
+        <button type="button" data-tool="pattern" title="Click dots in the order the selected enemy shoots at them">◎ Shoot pattern</button>
+        <button type="button" data-tool="erase" title="Click a dot, enemy or path stop to remove it">✕ Erase</button>
+        <button type="button" class="secondary" id="arClear">Clear all</button>
+      </div>
+      <div class="muted small" id="arHelp"></div>
+      <canvas id="arCanvas" width="960" height="640"></canvas>
+      <div class="makerGrid">
+        <label>Name <input id="arName" maxlength="24" placeholder="My level"></label>
+        <label>To win <select id="arWin"><option value="catch">Catch white balls</option><option value="survive">Survive</option></select></label>
+        <label id="arKL">White balls to catch <b id="arKV"></b><input id="arK" type="range" min="1" max="30" value="5"></label>
+        <label id="arWL" hidden>Seconds to survive <b id="arWV"></b><input id="arW" type="range" min="10" max="180" step="5" value="45"></label>
+        <label>Lives <b id="arLV"></b><input id="arL" type="range" min="1" max="5" value="3"></label>
+        <label>Ball speed <b id="arSpV"></b><input id="arSp" type="range" min="60" max="160" step="10" value="100"></label>
+        <label style="grid-column:1/-1">Intro line (said at the start) <input id="arIntro" maxlength="60" placeholder="Welcome to my level!"></label>
+      </div>
+      <div id="arEnemyBox" class="card mkEnemy" hidden>
+        <div class="row" style="justify-content:space-between"><b id="arEnTitle">Enemy</b><span class="muted small">Pick a tool above to give it a walk path or a shoot pattern</span></div>
+        <div class="makerGrid">
+          <label>Name <input id="arEnName" maxlength="16"></label>
+          <label>Shoots every <b id="arEnRV"></b><input id="arEnR" type="range" min="500" max="6000" step="100" value="2000"></label>
+          <label>White balls <b id="arEnWhV"></b><input id="arEnWh" type="range" min="0" max="100" step="10" value="40"></label>
+          <label>Shoots at <select id="arEnA"><option value="you">You (wherever you are)</option><option value="rand">Random dots</option><option value="pat">A set pattern</option></select></label>
+          <label>Walk speed <b id="arEnMsV"></b><input id="arEnMs" type="range" min="0" max="8" step="0.5" value="3"></label>
+        </div>
+        <div class="small"><b>Things it says</b> <span class="muted">(at a time in seconds; swear words aren't allowed)</span></div>
+        <div id="arLines"></div>
+      </div>
+      <div class="row"><input id="arLoad" placeholder="Paste a level code to edit it (CC4-…)"><button type="button" class="secondary" id="arLoadBtn">Edit this code</button></div>
+    </div>
+    <div id="mkQuick" hidden>
+    <div class="makerGrid">
+      <label>Name <input id="mkName" maxlength="24" placeholder="My level"></label>
+      <label>Kind <select id="mkType"><option value="dodge">Dodge waves</option><option value="catch">Catch in a row</option><option value="boss">Boss fight</option></select></label>
+      <label>Lanes <b id="mkLanesV"></b><input id="mkLanes" type="range" min="3" max="7" value="5"></label>
+      <label>Ball speed <b id="mkSpeedV"></b><input id="mkSpeed" type="range" min="60" max="140" value="100"></label>
+      <label data-for="dodge boss">Waves <b id="mkWavesV"></b><input id="mkWaves" type="range" min="3" max="40" value="8"></label>
+      <label data-for="dodge boss">Most balls at once <b id="mkBallsV"></b><input id="mkBalls" type="range" min="1" max="5" value="3"></label>
+      <label data-for="catch">Catches in a row <b id="mkNeedV"></b><input id="mkNeed" type="range" min="3" max="20" value="10"></label>
+      <label data-for="boss">Boss hits to win <b id="mkHpV"></b><input id="mkHp" type="range" min="2" max="15" value="5"></label>
+    </div>
+    <h3>Ball tricks <span class="muted small">(how often, 0-100%)</span></h3>
+    <div class="makerGrid" id="mkMods"></div>
+    <div class="row"><label class="chk"><input type="checkbox" id="mkInv"> Flip the controls now and then</label><label class="chk"><input type="checkbox" id="mkDel"> Delete lanes now and then</label></div>
+    </div>
+    <div class="row"><input id="mkCode" readonly><button type="button" class="secondary" id="mkCopy">Copy code</button></div>
+    <div class="row"><button type="button" id="mkPlay">Play it</button><button type="button" class="secondary" id="mkPublish">Publish</button><span class="muted small" id="mkSlots"></span></div>
+  </div>
+  <div data-mkpane="browse" hidden>
+    <div class="row"><input id="mkPlayCode" placeholder="Paste a level code (CC4-…)"><button type="button" class="secondary" id="mkPasteBtn">Paste</button><button type="button" id="mkPlayCodeBtn">Play</button></div>
+    <h3>⭐ Admin's choice</h3><div id="mkPicks" class="mkList"></div>
+    <h3>Most liked <span class="muted small">(top 20)</span></h3><div id="mkTop" class="mkList"></div>
+    <h3>Newest <span class="muted small">(last 50)</span></h3><div id="mkNew" class="mkList"></div>
+    <div class="muted small">This list updates every 10 minutes. Levels nobody plays for 30 days are removed.</div>
+  </div>
+  <div data-mkpane="mine" hidden><div id="mkMine" class="mkList"></div></div>
+</div></div>
   <div id="tab-weekly" class="tab" hidden>
     <div class="card">
       <h2 style="margin:0">Weekly Shop</h2>
@@ -223,6 +292,8 @@
 </div>
 
 <!-- ================= GAME ================= -->
+
+
 <div id="miniScreen" hidden>
   <div id="miniBar">
     <button type="button" id="miniLeave" class="ghost">← Leave</button>
@@ -368,6 +439,16 @@
     <div class="row" style="justify-content:space-between;margin-top:12px">
       <div><b>Story World 2</b><div class="muted small">Levels 11-20 (the Shadow League). Off until you switch it on. Players need to beat level 10 first.</div></div>
       <button type="button" id="adminWorld2Btn">…</button>
+    </div>
+    <div id="adminWorld34" hidden>
+      <div class="row" id="adminWorld3Row" style="justify-content:space-between;margin-top:12px">
+        <div><b>Story World 3</b><div class="muted small">Levels 21-30 (the Founder). On unless you switch it off. Switching it off also hides World 4.</div></div>
+        <button type="button" id="adminWorld3Btn">…</button>
+      </div>
+      <div class="row" id="adminWorld4Row" style="justify-content:space-between;margin-top:12px">
+        <div><b>Story World 4</b><div class="muted small">Levels 31-40 (you). Off until you switch it on. Beating level 40 unlocks the Level Maker.</div></div>
+        <button type="button" id="adminWorld4Btn">…</button>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -553,5 +634,8 @@
 <script src="js/profanity.js"></script>
 <script src="js/extras.js"></script>
 <script src="js/minigame.js"></script>
+<script src="js/arena.js"></script>
+<script src="js/maker.js"></script>
+<script src="js/hub.js"></script>
 </body>
 </html>
