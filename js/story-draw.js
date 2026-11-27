@@ -92,7 +92,7 @@ function rogueWindows(box) {
   let html = "";
   if (st.state === "intro") {
     html = `<div class="storyBig">☠️</div><h2>Boss Rush</h2><p>One boss after another, each one harder. One life: lose once and the run is over.</p>
-      <p class="muted small">Every 10 levels pays points (10 each up to level 50, then 20 each, and level 100 pays 150). Level 30 is as hard as the Captain, 60 as hard as the Founder. Nobody has beaten level 100.</p>
+      <p class="muted small">Every boss you beat pays 5 points, every 10th level 50, every 100th 1,000, and level 250 pays 10,000. Level 30 is as hard as the Captain, 60 as hard as the Founder. Nobody has beaten level 100.</p>
       <p><b>Your best: ${best ? "level " + best : "none yet"}</b></p>
       <button type="button" id="storyGo">Start</button>`;
   } else if (st.state === "cleared") {

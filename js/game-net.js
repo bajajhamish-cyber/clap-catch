@@ -12,7 +12,7 @@ let SD = null, S = null, players = {}, ball = null, rules = {}, doubles = {}, fx
 const TARGET_ABILITIES = { counterForce: "who they must throw to", neutralise: "who to Neutralise (costs you 5 points)",
   heavenlyWrath: "who gets Heavenly Wrath (you give them 5 points)", devilsDeal: "who to make a Devil's Deal with (you pay them 500 points)",
   silence: "who to Silence" };
-const baseAbility = id => (id && id.startsWith("plat_") ? id.slice(5) : id);      // Platinum versions pick a target the same way
+const baseAbility = id => (id ? id.replace(/^(plat|dia)_/, "") : id);      // Platinum versions pick a target the same way
 const targetText = id => TARGET_ABILITIES[baseAbility(id)];
 let me = { id: null, name: "" };
 let MODE = "casual", IS_PUBLIC = false, IS_RISK = false, ROOM_KEY = "", inGame = false;

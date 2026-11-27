@@ -82,6 +82,7 @@ function shrinkImage(file, size) {
 
 async function refreshAdmin() {
   if (!PROFILE || !PROFILE.isAdmin) return;
+  if (typeof refreshMiniAdmin === "function") refreshMiniAdmin();
   el("ogTabBtn").hidden = !PROFILE.isOwner;            // the OG skins tab is for bajajhamish only, no secret keys needed
   el("annTabBtn").hidden = !PROFILE.annUnlocked;        // bajajhamish always; kythor once his Announcements quest is done
   if (el("annTabBtn").hidden && document.querySelector('[data-apane="ann"]:not([hidden])')) adminTab("main");
@@ -121,7 +122,8 @@ function adminTab(name) {
   if (name === "og") refreshOg();
   if (name === "ann") refreshAnnAdmin();
   if (name === "you") refreshYou();
-  if (name === "wheel") refreshWheel();
+  if (name === "wheel") { refreshWheel(); refreshSure(); }
+  if (name === "main") refreshMiniAdmin();
 }
 document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => adminTab(b.dataset.atab));
 let secretKeys = "";

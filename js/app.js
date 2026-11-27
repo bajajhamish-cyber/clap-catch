@@ -15,7 +15,7 @@ function toast(msg, bad) {
   t.textContent = msg; t.className = "show" + (bad ? " bad" : "");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.className = "", 2800);
 }
-function showScreen(name) { ["authScreen", "menuScreen", "game", "banScreen"].forEach(id => el(id).hidden = id !== name); }
+function showScreen(name) { ["authScreen", "menuScreen", "game", "banScreen", "miniScreen"].forEach(id => el(id).hidden = id !== name); }
 function setProfile(p) { if (!p) return; PROFILE = p; if (p.update3 && typeof setU3 === "function") setU3(true); if (!checkBan()) renderAll(); }
 function onPoints(points) { if (PROFILE) { PROFILE.points = points; el("gamePoints").textContent = "⭐ " + points; } }
 
@@ -63,6 +63,8 @@ auth.onAuthStateChanged(async user => {
     if (nextLv && !inGame && el("banScreen").hidden && STORY_LEVELS[nextLv - 1]) openNextStory(nextLv, 4);
     let again = 0; try { again = +sessionStorage.getItem("cc_next_rogue") || 0; sessionStorage.removeItem("cc_next_rogue"); } catch (e) {}
     if (again && !nextLv && !inGame && el("banScreen").hidden) enterRoom(async () => rogueRoomKey());
+    let miniAgain = 0; try { miniAgain = +sessionStorage.getItem("cc_mini_again") || 0; sessionStorage.removeItem("cc_mini_again"); } catch (e) {}
+    loadMiniInfo().then(() => { if (miniAgain && !inGame && el("banScreen").hidden) playMini(); });
     if (p.tutorialDone === false && !tutAutoShown) { tutAutoShown = true; openTutorial(true, p.tutorialSeenBefore); }
     if (p.whatsNew && !newsAutoShown && !inGame) { newsAutoShown = true; el("newsModal").style.display = "flex"; }      // "What's new" page: players who have played before, once
     refreshTrades();
@@ -436,6 +438,34 @@ function renderPlatinum() {
       <button type="button" data-plat="${id}">Risk 1 ${R.name}</button></div>`;
   }).join("") : "<div class='card muted'>You don't have any abilities to risk yet. Get some from the Shop!</div>";
   document.querySelectorAll("[data-plat]").forEach(b => b.onclick = () => riskPlatinum(b.dataset.plat));
+  // Diamond: risk a Platinum
+  const pids = Object.keys(DIAMOND).filter(id => ab["plat_" + id] > 0);
+  el("diaList").innerHTML = pids.length ? pids.map(id => {
+    const R = RULES[id], have = ab["dia_" + id] || 0;
+    return `<div class="platItem diaItem"><div class="platTop"><span class="platIcon">${R.icon}</span><div><b style="color:#b9f2ff">Platinum ${R.name}</b> <span class="muted small">you have ${ab["plat_" + id]}</span>
+        ${have ? `<div class="small" style="color:#7df9ff">🔷 You own ${have} Diamond</div>` : ""}</div></div>
+      <div class="small platBonus"><b style="color:#7df9ff">🔷 Diamond:</b> ${DIAMOND[id]}</div>
+      <button type="button" data-dia="${id}">Risk 1 Platinum ${R.name}</button></div>`;
+  }).join("") : "<div class='card muted'>You don't have any Platinum abilities yet. Make one above first!</div>";
+  document.querySelectorAll("[data-dia]").forEach(b => b.onclick = () => riskDiamond(b.dataset.dia));
+}
+async function riskDiamond(id) {
+  const R = RULES[id];
+  if (!confirm(`Risk 1 Platinum ${R.name}?\n\n20%: it becomes Diamond ${R.name}.\n80%: it stops being Platinum (you get a normal ${R.name} back).`)) return;
+  if (busy) return; busy = true;
+  el("rollModal").style.display = "flex"; el("rollClose").hidden = true;
+  el("rollTitle").textContent = `Diamond-ising ${R.name}…`;
+  el("rollBox").innerHTML = `<div class="platSpin diaSpin">${R.icon}</div><div id="rollResult"></div>`;
+  let r;
+  try { r = await api("diamondRisk", { id }); }
+  catch (e) { el("rollModal").style.display = "none"; busy = false; toast(e.message, true); return; }
+  setTimeout(() => {
+    el("rollBox").querySelector(".platSpin").classList.add(r.win ? "win" : "lose");
+    el("rollTitle").innerHTML = r.win ? `<span style="color:#7df9ff">🔷 DIAMOND!</span>` : "It lost its shine…";
+    el("rollResult").innerHTML = r.win ? `<div class="rollName" style="color:#7df9ff">Diamond ${esc(R.name)}</div><div class="small">${DIAMOND[id]}</div>` : `<div class="muted">Your Platinum ${esc(R.name)} is a normal ${esc(R.name)} again.</div>`;
+    playTone(r.win ? 1500 : 180, r.win ? 0.7 : 0.5, r.win ? "triangle" : "sawtooth", 0.2);
+    el("rollClose").hidden = false; setProfile(r.me); busy = false;
+  }, 2600);
 }
 async function riskPlatinum(id) {
   const R = RULES[id], last = (PROFILE.abilities[id] || 0) === 1;

@@ -65,6 +65,7 @@
   <div id="tab-announce" class="tab" hidden><div id="announceBox"></div></div>
 
   <div id="tab-play" class="tab">
+    <div id="miniCard" class="card miniCard"></div>
     <div class="modes">
       <div class="mode card" data-mode="casual">
         <h3>🎉 Original / Casual</h3>
@@ -145,6 +146,13 @@
         <b>90% chance it's gone forever</b>. Only one copy is risked at a time, so extras are the safest to try with.</div>
     </div>
     <div id="platList" class="platList"></div>
+    <div class="card platHead diaHead">
+      <h2 style="margin:0">🔷 Diamond</h2>
+      <div>Risk one <b style="color:#b9f2ff">Platinum</b> ability: <b>20% chance</b> it becomes <b style="color:#7df9ff">Diamond</b>,
+        <b>80% chance it stops being Platinum</b> (you get the normal ability back). Platinum abilities with their own special power can be used
+        <b>twice a game</b> as Diamond. The ones that were already "2 uses each round" get <b>something new</b> as Diamond.</div>
+    </div>
+    <div id="diaList" class="platList"></div>
   </div>
 
   <div id="tab-weekly" class="tab" hidden>
@@ -215,6 +223,32 @@
 </div>
 
 <!-- ================= GAME ================= -->
+<div id="miniScreen" hidden>
+  <div id="miniBar">
+    <button type="button" id="miniLeave" class="ghost">← Leave</button>
+    <span id="miniLabel"></span>
+    <span id="miniPoints" class="points"></span>
+  </div>
+  <div id="miniStage">
+    <canvas id="mc" width="960" height="640"></canvas>
+    <div id="clickerUI" hidden>
+      <div class="clickMain">
+        <div class="clickCount"><b id="clickSq">0</b><span> squares</span></div>
+        <div class="muted small" id="clickRates"></div>
+        <button type="button" id="clickBtn" aria-label="Click for squares"></button>
+        <div class="muted small" id="clickRank"></div>
+      </div>
+      <div class="clickSide">
+        <h3>Upgrades</h3><div id="clickShop"></div>
+        <h3>Top squares</h3><ol id="clickTop" class="lbList"></ol>
+        <div class="muted small" id="clickEnds"></div>
+      </div>
+    </div>
+    <div id="miniOverlay" hidden><div class="box" id="miniOverlayBox"></div></div>
+  </div>
+  <div id="miniHelp" class="muted small"></div>
+</div>
+
 <div id="game" hidden>
   <div id="bar">
     <button id="leaveBtn" class="ghost">← Leave</button>
@@ -280,6 +314,14 @@
   </nav>
   <div class="adminMain">
   <div class="adminPane" data-apane="main">
+  <div class="card" id="adminMiniCard">
+    <h3 style="margin-top:0">🎮 Daily minigame</h3>
+    <div id="adminMiniNow" class="small"></div>
+    <div class="row"><select id="adminMiniPick"></select><button type="button" id="adminMiniSet">Make it tomorrow's</button><button type="button" class="secondary" id="adminMiniCancel" hidden>Cancel</button></div>
+    <div class="muted small">It changes at midnight (Canberra time). Picking one makes the list jump to it tomorrow and carry on in order from there. You can cancel it any time before midnight.</div>
+    <div class="row" id="adminMiniOffRow" style="margin-top:8px" hidden><button type="button" class="secondary" id="adminMiniOff">Turn the daily minigame off</button></div>
+    <div id="adminMiniOffNote" class="small" style="color:#ffb86b"></div>
+  </div>
   <div class="card" id="adminUpdateCard" hidden>
     <h3 style="margin-top:0">New update</h3>
     <div class="muted small">Switches on everything in the new update for everyone. It's a one-time switch: it can't be turned off again.</div>
@@ -365,6 +407,12 @@
   </div>
   <div class="adminPane" data-apane="wheel" hidden>
     <div class="card">
+      <h3 style="margin-top:0">💎 Sure thing</h3>
+      <div class="muted small">That player's <b>next</b> Platinum or Diamond try is guaranteed to work. They aren't told. It's used up after one try.</div>
+      <div class="row" style="margin-top:8px"><input id="sureUser" placeholder="Username" maxlength="16" autocomplete="off"><button type="button" id="sureAddBtn">Guarantee their next one</button></div>
+      <div id="sureList" class="small"></div>
+    </div>
+    <div class="card">
       <h3 style="margin-top:0">🎡 Limited pack wheel</h3>
       <div class="muted small">Add players, then spin. Whoever it lands on gets a guaranteed top-rarity item from their <b>next limited pack</b>. They aren't told.</div>
       <div class="row" style="margin-top:8px"><input id="wheelUser" placeholder="Username" maxlength="16" autocomplete="off"><button type="button" id="wheelAddBtn">Add to wheel</button><button type="button" class="secondary" id="wheelClearBtn">Clear</button></div>
@@ -443,35 +491,24 @@
 <div id="newsModal"><div class="box">
   <h2>What's new</h2>
   <div id="newsBody">
-    <h3>World 3: The Founder (levels 21-30)</h3>
-    <p>Beat the World 2 boss to open it. New tricks to learn: <b>curve balls</b> (head for one lane, then turn), <b>ghost balls</b> (vanish halfway), <b>bombs</b> (hit 3 lanes), <b>split balls</b>, and a <b>shielded guard</b>. Level 30 is the Founder, with 3 phases.</p>
+    <h3>Daily minigame</h3>
+    <p>There's a new minigame every day, at the top of the <b>Play</b> tab. It changes at midnight (Canberra time) and goes round these five:</p>
     <ul>
-      <li>Lose a level and you can just try it again. The Founder restarts from wave 1.</li>
-      <li>+20 points the first time you beat each level.</li>
-      <li>Beating the Founder unlocks the <b>Weekly Shop</b>, the <b>Creator Pack</b> and <b>Boss Rush</b>.</li>
+      <li><b>Color Mode:</b> a colour is called out. Get onto it before the timer runs out or you're out. It speeds up every round. Everyone still in at the end gets <b>30 points</b>.</li>
+      <li><b>Ultra Boss:</b> everyone in the game against one giant boss. Doors open at <b>11:15 am</b>, the boss attacks from <b>11:20 to 11:30 am</b> with lasers, fireballs, shockwaves and by taking away half the map. One hit and you're out. Still standing at 11:30: <b>120 points</b>.</li>
+      <li><b>Dodgeball:</b> 1 on 1, one ball. Throw it down your lane and dodge theirs. The lanes shrink and the ball gets faster. Winner gets <b>50 points</b>.</li>
+      <li><b>Buildups:</b> one random player is IT, and anyone they touch is IT too. Last one standing wins <b>100 points</b>. Staying to the end gets you 10 (20 if you started as IT). Leaving early costs 5 (10 if you started as IT).</li>
+      <li><b>Idle Clicker:</b> click for squares and buy upgrades that keep making them, even while you're away. Most squares at midnight wins <b>500 points</b>. It starts from zero every time it comes round.</li>
     </ul>
-    <h3>Boss Rush</h3>
-    <p>Unlocked by beating World 3. You'll find it in the Story tab under World 3. One boss after another, each harder than the last, and <b>one life</b>: lose once and the run is over. Level 1 is like the World 1 boss, level 30 like the Captain, level 60 like the Founder, and it keeps getting worse up to level 250.</p>
+    <p>Color Mode, Dodgeball and Buildups are matchmade, and bots fill any empty spots.</p>
+    <h3>Diamond abilities</h3>
+    <p>In the <b>Platinum</b> tab you can now risk a Platinum ability to make it <b>Diamond</b>: a <b>20% chance</b> it works, and an <b>80% chance</b> it goes back to being a normal ability.</p>
     <ul>
-      <li>Points every 10 levels: 10 each up to level 50, then 20 each, and level 100 pays 150.</li>
-      <li>Your best level goes on the Leaderboard.</li>
+      <li>Platinum abilities with their own special power can be used <b>twice a game</b> as Diamond.</li>
+      <li>The ones that were already "2 uses each round" get <b>something new</b> instead. Each card shows what.</li>
     </ul>
-    <h3>Weekly Shop</h3>
-    <p>Unlocked by beating World 3. <b>3 accessories</b>, the same for everyone, that change <b>every Monday at 9am (Canberra time)</b>. Accessories are cosmetics: hats, auras, effects for when you get someone out, a wallpaper, and the Backpack, which lets you equip 4 abilities instead of 3.</p>
-    <ul>
-      <li>Prices: common 120, uncommon 250, rare 500, legendary 1,500 points.</li>
-      <li>Each slot is chosen at random: common 60%, uncommon 25%, rare 14%, legendary 1%.</li>
-      <li>Everyone can put points into a shared pool (10 or more at a time). When it reaches <b>12,500</b>, the shop refreshes for everyone straight away.</li>
-    </ul>
-    <h3>Leaderboard</h3>
-    <p>A new tab showing the <b>top 10</b> for four things: matchmade Competitive wins, best Boss Rush level, most points right now, and most points spent. It updates every 10 minutes. Competitive wins and points spent count from the day this update went live.</p>
-    <h3>Free Daily Pack (the Leaderboard reward)</h3>
-    <p>It's in the <b>Shop</b>, next to the ability packs. Every day at <b>midnight (Canberra time)</b>, the game looks at the leaderboards.</p>
-    <ul>
-      <li>If you're on any leaderboard at that moment, you can open <b>1 random ability pack free</b> that day.</li>
-      <li>If you're number 1 on several boards, you get 1 free pack for each board you're top of.</li>
-      <li>A tiny timer in the top-left corner of the Free Daily Pack counts down to the next one.</li>
-    </ul>
+    <h3>Boss Rush pays more</h3>
+    <p>Every boss you beat now pays <b>5 points</b>. Every 10th level pays <b>50</b>, every 100th <b>1,000</b>, and level 250 pays <b>10,000</b>.</p>
   </div>
   <button type="button" id="newsClose">Got it!</button>
 </div></div>
@@ -515,5 +552,6 @@
 <script src="js/star.js"></script>
 <script src="js/profanity.js"></script>
 <script src="js/extras.js"></script>
+<script src="js/minigame.js"></script>
 </body>
 </html>

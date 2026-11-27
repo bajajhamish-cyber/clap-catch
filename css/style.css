@@ -453,3 +453,37 @@ body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }
 .wheelWrap { position: relative; width: 360px; max-width: 100%; margin: 0 auto; }
 .wheelWrap canvas { width: 100%; height: auto; background: none; border-radius: 50%; cursor: default; }
 .wheelPtr { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 26px solid #ffcc33; z-index: 2; filter: drop-shadow(0 2px 2px #000a); }
+
+/* Diamond */
+.diaHead { margin-top: 18px; background: linear-gradient(135deg, #1e2129, #16323a); }
+.diaItem { border-color: #2c5b66; }
+.diaSpin { filter: drop-shadow(0 0 14px #7df9ff); }
+
+/* ---------------- daily minigame ---------------- */
+.miniCard { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(135deg, #1e2129, #2a2236); }
+.miniHead { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.miniHead h3 { margin: 0; font-size: 22px; }
+.miniIcon { font-size: 40px; }
+.miniGo { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.miniNext { border-top: 1px solid #2f3340; padding-top: 6px; }
+#miniScreen { max-width: 980px; margin: 0 auto; padding: 10px; }
+#miniBar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+#miniBar #miniLabel { font-weight: 700; font-size: 18px; flex: 1; }
+#miniStage { position: relative; }
+#mc { width: 100%; max-width: 960px; aspect-ratio: 3 / 2; display: block; background: #0d0f14; border-radius: 6px; }
+#miniOverlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#miniOverlay[hidden] { display: none; }
+#miniOverlay .box { background: #1a1c1f; border: 1px solid #2f3340; border-radius: 6px; padding: 20px 26px; text-align: center; max-width: 440px; }
+#miniOverlay h2 { margin: 0 0 8px; }
+#miniHelp { margin-top: 8px; }
+#clickerUI { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; min-height: 560px; }
+#clickerUI[hidden] { display: none; }
+.clickMain { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #15171d; border-radius: 6px; padding: 20px; }
+.clickCount b { font-size: 46px; font-variant-numeric: tabular-nums; }
+#clickBtn { width: 220px; height: 220px; border-radius: 18px; background: linear-gradient(135deg, #2f80ed, #1b4f9c); border: 4px solid #8fc1ff; box-shadow: 0 10px 0 #123866; cursor: pointer; transition: transform .06s; }
+#clickBtn:active, #clickBtn.pop { transform: translateY(4px) scale(.97); box-shadow: 0 6px 0 #123866; }
+.clickSide { display: flex; flex-direction: column; gap: 8px; }
+.clickSide h3 { margin: 6px 0 0; }
+.clickUp { display: block; width: 100%; text-align: left; position: relative; margin-bottom: 6px; background: #1e2129; }
+.clickCost { position: absolute; right: 10px; top: 10px; font-weight: 700; }
+@media (max-width: 700px) { #clickerUI { grid-template-columns: 1fr; } }

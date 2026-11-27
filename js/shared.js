@@ -65,9 +65,10 @@ const RARITY = {
   legendary: { label: "Legendary", color: "#ffb300" },
   mythical:  { label: "Mythical",  color: "#ff4dff" },
   platinum:  { label: "Platinum",  color: "#b9f2ff" },
-  og:        { label: "OG",        color: "#ffd740" },        // OG skins (one per player, never tradeable)
+  og:        { label: "OG",        color: "#ffd740" },
+  diamond:   { label: "Diamond",   color: "#7df9ff" },        // OG skins (one per player, never tradeable)
 };
-const RARITY_RANK = { common: 0, uncommon: 0.5, rare: 1, legendary: 2, mythical: 3, og: 3.5, platinum: 4 };
+const RARITY_RANK = { common: 0, uncommon: 0.5, rare: 1, legendary: 2, mythical: 3, og: 3.5, platinum: 4, diamond: 5 };
 
 const ABILITY_PACKS = {
   guardian:  { name: "Guardian Pack",  icon: "🛡️", theme: "Defence: block and cancel",
@@ -132,6 +133,28 @@ Object.keys(PLATINUM).forEach(id => {
   RULES["plat_" + id] = { name: "Platinum " + b.name, type: "ability", platinum: true, base: id, limited: b.limited, icon: b.icon, desc: b.desc + " PLATINUM: " + PLATINUM[id] };
 });
 const PLAT_CHANCE = 0.1;
+// ---- Diamond (Platinum tab): risk a Platinum ability. 20% it becomes Diamond, 80% it drops back to the normal ability.
+// Platinum ones that were "something unique" get 2 uses each round as Diamond.
+// Platinum ones that were already "2 uses each round" get something new as Diamond (and keep 2 uses).
+const DIAMOND_CHANCE = 0.2;
+const DIAMOND_UNIQUE = {
+  doubleForce: "They must throw to you the next 3 times instead of 2.",
+  antiForce: "Also braces you: fakes can't get you for 3 seconds.",
+  counterForce: "The throw you force is also 40% faster.",
+  absoluteCounter: "Also stuns whoever has the ball for 1.5 seconds.",
+  ward: "Also lifts any Silence on you and braces you against fakes for 3 seconds.",
+  decoy: "Also hides your throw bar (like Smokescreen).",
+  clone: "Their bar also fills 2x slower while they decide.",
+  warCry: "Also makes their panicked throw 40% faster.",
+  fullWipe: "Also wipes every force in play (Double, Counter and Anti Force).",
+  boomerang: "Your throw is also invisible (like Ghost Ball).",
+};
+const DIAMOND = {};
+Object.keys(PLATINUM).forEach(id => {
+  DIAMOND[id] = PLAT_TWO_USES.includes(id) ? DIAMOND_UNIQUE[id] + " Still 2 uses each round." : PLATINUM[id] + " And 2 uses each round.";
+  const b = RULES[id];
+  RULES["dia_" + id] = { name: "Diamond " + b.name, type: "ability", platinum: true, diamond: true, base: id, limited: b.limited, icon: b.icon, desc: b.desc + " DIAMOND: " + DIAMOND[id] };
+});
 
 // ---- Story mode: World 1 (levels 1-10) and World 2 (levels 11-20, switched on by the admin)
 const SK_MOVE = "<b>W</b>/<b>S</b>";
@@ -248,6 +271,7 @@ function luckyOdds(items) {
 }
 function abilityRarity(id) {
   if (id && id.startsWith("plat_")) return "platinum";
+  if (id && id.startsWith("dia_")) return "diamond";
   for (const p of [...Object.values(ABILITY_PACKS), ...Object.values(LIMITED_PACKS)]) if (p.kind !== "skin") for (const [a, , r] of p.items) if (a === id) return r;
   return "common";
 }
@@ -307,10 +331,11 @@ const OG = { USERS: ["dooomm", "kythor", "cookie_clicker", "imsmaat"], GAMES: 50
 const ANN = { TEMP_MS: 10000, TEMP_MAX: 200, TITLE_MAX: 60, LONG_MAX: 1500, MAX_LONG: 5, MIN_MINUTES: 1, MAX_MINUTES: 60 * 24 * 30, GAMES: 50, WINS: 20, COST: 1000 };
 // ---- Boss Rush (rogue-like): beat boss after boss; every level is harder. Needs World 3 beaten.
 const ROGUE = { MAX: 250 };
-function rogueReward(level) {             // points for clearing a level (only every 10th level pays)
-  if (level % 10 !== 0) return 0;
-  if (level === 100) return 150;
-  return level <= 50 ? 10 : 20;
+function rogueReward(level) {             // points for beating a boss: 5 each, every 10th 50, every 100th 1000, level 250 10000 (the biggest one only)
+  if (level >= 250 && level % 250 === 0) return 10000;
+  if (level % 100 === 0) return 1000;
+  if (level % 10 === 0) return 50;
+  return 5;
 }
 // the boss for a Boss Rush level. 1 = the World 1 boss, 30 = the Captain, 60 = the Founder,
 // 100 = close to impossible, and it keeps getting worse up to 250.
@@ -335,7 +360,7 @@ function rogueLevel(L) {
 const ECON = {
   START_POINTS: 0, PACK_COST: 50, SKIN_PACK_COST: 100, TRADE_COST: 5,
   WIN_POINTS: 25, ELIM_POINTS: 5, RISK_MIN_STAKE: 5, BAN_MS: 30 * 60 * 1000,
-  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, WHATS_NEW: 1, ADMIN_USERNAME: "bajajhamish", HELPER_USERNAME: "kythor", MAX_PLAYERS: 6,
+  TEAM_STREAK: 3, TEAM_COOLDOWN: 3, BOUNTY_POINTS: 25, NEUTRALISE_COST: 5, WRATH_COST: 5, DEAL_COST: 500, BOARD_SLOTS: 100, TUTORIAL_VERSION: 3, PLACE_POINTS: [20, 15, 10, 5], STORY_POINTS: 20, BOARD_SLOT_COST: 100, WHATS_NEW: 2, ADMIN_USERNAME: "bajajhamish", HELPER_USERNAME: "kythor", MAX_PLAYERS: 6,
 };
 
 // ---- Level up system. Everyone starts at level 1. Each level has 3 quests; finish all 3, press Level Up.
@@ -399,3 +424,27 @@ function levelReward(L) {
   const d = Math.max(1, Math.floor(+L || 1)) / 5, x = Math.floor(d) > 0 ? Math.floor(d) : Math.ceil(d);
   return 100 * x;
 }
+
+// ---- Daily minigame: one each day (changes at midnight Canberra time), in this order. Admins can pick the next one.
+const MINI = {
+  ORDER: ["color", "ultra", "duel", "tag", "clicker"],
+  NAMES: { color: "Color Mode", ultra: "Ultra Boss", duel: "Dodgeball", tag: "Buildups", clicker: "Idle Clicker" },
+  ICONS: { color: "🎨", ultra: "🐉", duel: "🔴", tag: "🧟", clicker: "🟦" },
+  DESC: {
+    color: "A colour is called out. Get onto that colour before the timer runs out, or you're out. It gets faster every round. Everyone still in at the end gets 30 points.",
+    ultra: "Everyone in the game against one giant boss. Doors open at 11:15 am (Canberra time), the boss attacks from 11:20 to 11:30 am. Get hit once and you're out. Everyone still standing at 11:30 gets 120 points.",
+    duel: "1 on 1, one ball. Throw it down your lane, dodge theirs. The lanes shrink and the ball gets faster. Winner gets 50 points.",
+    tag: "One random player is IT. Get touched and you're IT too. Last one standing wins 100 points. Stay to the end: +10 (+20 for whoever started as IT). Leave mid-game: -5 (-10 for the first IT).",
+    clicker: "Click to make squares and buy upgrades that make more. Whoever has the most squares at midnight wins 500 points. Squares don't carry over to next time.",
+  },
+  SLOTS: { color: 8, tag: 8, duel: 2 },
+  COLOR_PTS: 30, ULTRA_PTS: 120, DUEL_PTS: 50, TAG_WIN: 100, TAG_STAY: 10, TAG_IT_STAY: 20, TAG_LEAVE: 5, TAG_IT_LEAVE: 10, CLICK_WIN: 500,
+  ULTRA_JOIN: [11, 15], ULTRA_START: [11, 20], ULTRA_END: [11, 30],
+  CLICK_UPGRADES: {
+    click:   { name: "Bigger clicks", cost: 25,    grow: 1.55, desc: "+1 square per click" },
+    auto:    { name: "Auto square",   cost: 60,    grow: 1.6,  desc: "+1 square every second" },
+    factory: { name: "Square factory", cost: 1500, grow: 1.75, desc: "+15 squares every second" },
+    mega:    { name: "Mega factory",  cost: 25000, grow: 1.9,  desc: "+200 squares every second" },
+  },
+};
+function clickCost(item, lv) { const u = MINI.CLICK_UPGRADES[item]; return Math.round(u.cost * Math.pow(u.grow, lv || 0)); }

@@ -220,7 +220,7 @@ function storyW3Html(row) {
   let h = `<h3 class="worldHead">World 3: The Founder</h3>`;
   h += done.includes(STORY_W2) ? w3.map(([L, i]) => row(L, i)).join("") : `<div class="muted small">Beat the World 2 boss (level 20) to open World 3.</div>`;
   if (PROFILE.story3Unlocked) h += `<div class="muted small" style="margin-top:8px">You beat the Founder. The Weekly Shop and the Creator Pack are unlocked.</div>`;
-  h += `<div class="card rogueCard"><div><h3 style="margin:0">Boss Rush</h3><div class="muted small">Endless bosses, each one harder, one life. Points every 10 levels.${PROFILE.story3Unlocked ? ` Your best: ${PROFILE.rogueBest ? "level " + PROFILE.rogueBest : "none yet"}.` : " Beat World 3 to unlock it."}</div></div>
+  h += `<div class="card rogueCard"><div><h3 style="margin:0">Boss Rush</h3><div class="muted small">Endless bosses, each one harder, one life. 5 points a boss, 50 every 10th, 1,000 every 100th.${PROFILE.story3Unlocked ? ` Your best: ${PROFILE.rogueBest ? "level " + PROFILE.rogueBest : "none yet"}.` : " Beat World 3 to unlock it."}</div></div>
     <button type="button" id="rogueBtn" ${PROFILE.story3Unlocked ? "" : "disabled"}>${PROFILE.story3Unlocked ? "Play" : "Locked"}</button></div>`;
   setTimeout(() => { const b = el("rogueBtn"); if (b) b.onclick = () => enterRoom(async () => rogueRoomKey()); }, 0);
   return h;
