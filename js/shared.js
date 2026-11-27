@@ -454,6 +454,8 @@ const LMAKER = {
   MODS: ["curve", "ghost", "bomb", "split", "glitch", "fake"],
   SLOTS: 3,                 // published levels per player
   NAME_MAX: 24,
+  COST: 150,               // points to make a new level (editing it, playing it and publishing it are free)
+  DRAFTS: 10,              // levels you can keep at once (delete one to make room)
   NEWEST: 50, TOP: 20,      // how many show in the Newest / Most liked lists
   PICKS: { owner: 3, helper: 2 },   // Admin's choice: 3 picked by bajajhamish, 2 by kythor
 };
@@ -548,11 +550,13 @@ function levelToCode(x) { const d = x && x.v === 2 ? arenaClean(x) : levelClean(
 function levelFromCode(code) {        // null if it isn't a real level code
   try {
     code = String(code || "").trim();
-    if (!/^CC4-[A-Za-z0-9_-]{8,6000}$/.test(code)) return null;
-    const raw = code.slice(4).replace(/-/g, "+").replace(/_/g, "/");
+    // a real code ends in ".signature": the server signs every level you save, so only paid-for levels work
+    const m = /^CC4-([A-Za-z0-9_-]{8,6000})(?:\.([A-Za-z0-9_-]{16,64}))?$/.exec(code); if (!m) return null;
+    const raw = m[1].replace(/-/g, "+").replace(/_/g, "/");
     const x = JSON.parse(unb64(raw + "===".slice((raw.length + 3) % 4)));
-    if (x && x.v === 2) { const d = arenaClean(x); return { data: d, cfg: { type: "arena", custom: d.n, arena: d } }; }
-    return levelClean(x);
+    const out = x && x.v === 2 ? (d => ({ data: d, cfg: { type: "arena", custom: d.n, arena: d } }))(arenaClean(x)) : levelClean(x);
+    out.body = m[1]; out.sig = m[2] || null;
+    return out;
   } catch (e) { return null; }
 }
 // ---- Daily minigame: one each day (changes at midnight Canberra time), in this order. Admins can pick the next one.

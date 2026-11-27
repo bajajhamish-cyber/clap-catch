@@ -160,6 +160,11 @@
   <div><h2 style="margin:0">Level Maker</h2><div class="muted small">Make your own levels, share them with a code, and play everyone else's. Unlocked by beating World 4.</div></div>
   <div class="makerTabs"><button type="button" data-mk="make" class="active">Make</button><button type="button" data-mk="browse">Play levels</button><button type="button" data-mk="mine">My levels</button></div>
   <div data-mkpane="make">
+    <div class="row mkDraftRow"><b>Your level</b> <select id="mkDraftSel"></select>
+      <button type="button" id="mkNewBtn">New level · 150</button><button type="button" class="secondary" id="mkSaveBtn">Save</button><button type="button" class="secondary" id="mkDraftDel">Delete</button>
+      <span class="muted small" id="mkSaveState"></span></div>
+    <div id="mkLocked" class="card mkEnemy" hidden><b>Making a level costs 150 points.</b> <span class="muted small">Press "New level" to start one. Editing it, playing it, sharing its code and publishing it are all free after that. You can keep 10 levels.</span></div>
+    <div id="mkEditor">
     <div class="mkModes"><button type="button" data-mkmode="build" class="active">Build your own</button><button type="button" data-mkmode="quick">Quick level</button></div>
     <div id="mkBuild">
       <div class="mkTools">
@@ -195,7 +200,7 @@
         <div class="small"><b>Things it says</b> <span class="muted">(at a time in seconds; swear words aren't allowed)</span></div>
         <div id="arLines"></div>
       </div>
-      <div class="row"><input id="arLoad" placeholder="Paste a level code to edit it (CC4-…)"><button type="button" class="secondary" id="arLoadBtn">Edit this code</button></div>
+      <div class="row"><input id="arLoad" placeholder="Paste any level code to copy it into this level (CC4-…)"><button type="button" class="secondary" id="arLoadBtn">Copy into this level</button></div>
     </div>
     <div id="mkQuick" hidden>
     <div class="makerGrid">
@@ -214,6 +219,7 @@
     </div>
     <div class="row"><input id="mkCode" readonly><button type="button" class="secondary" id="mkCopy">Copy code</button></div>
     <div class="row"><button type="button" id="mkPlay">Play it</button><button type="button" class="secondary" id="mkPublish">Publish</button><span class="muted small" id="mkSlots"></span></div>
+    </div>
   </div>
   <div data-mkpane="browse" hidden>
     <div class="row"><input id="mkPlayCode" placeholder="Paste a level code (CC4-…)"><button type="button" class="secondary" id="mkPasteBtn">Paste</button><button type="button" id="mkPlayCodeBtn">Play</button></div>

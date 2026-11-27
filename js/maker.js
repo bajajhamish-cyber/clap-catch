@@ -1,10 +1,13 @@
 // ======================================================================
 //  maker.js: the Level Maker (unlocked by beating World 4).
-//  A level is just a few settings packed into a share code (CC4-…), so
-//  making and sharing levels stores nothing. Publishing puts it on the
-//  list everyone can browse (3 per player).
+//  Making a new level costs points (the server keeps up to 10 per player).
+//  Saving one is free: the server checks it and signs its share code
+//  (CC4-…), and only signed codes play. Publishing puts it on the list
+//  everyone can browse (3 per player, free).
 // ======================================================================
 let JOIN_EXTRA = "", mkData = null;
+let mkDrafts = [], mkDraft = null, mkSaved = "", mkSavedBody = "", mkDrafted = false;
+try { mkDraft = localStorage.getItem("cc_draft") || null; } catch (e) {}
 const MK_MOD_NAMES = { curve: "Curve balls", ghost: "Ghost balls", bomb: "Bombs", split: "Split balls", glitch: "Glitched balls", fake: "Fake balls" };
 
 let mkCur = "make";
@@ -18,9 +21,73 @@ function makerShown() {
   if (!el("mkMods").children.length) {
     el("mkMods").innerHTML = LMAKER.MODS.map(k => `<label>${MK_MOD_NAMES[k]} <b id="mkM_${k}V"></b><input type="range" min="0" max="100" step="10" value="0" data-mod="${k}"></label>`).join("");
     el("makerModal").querySelectorAll("input, select").forEach(i => { if (!["mkPlayCode", "arLoad"].includes(i.id) && !i.closest("#arLines")) i.addEventListener("input", mkUpdate); });
-    arInit();
+    arInit(); mkDraftInit();
   }
   mkUpdate(); mkTab(mkCur);
+  if (!mkDrafted) { mkDrafted = true; mkDraftsLoad(); }
+}
+// ---------------------------------------------------------------- your levels (paid for, saved on the server)
+function mkDraftInit() {
+  el("mkNewBtn").onclick = async () => {
+    if ((PROFILE.points || 0) < LMAKER.COST) return toast(`Making a level costs ${LMAKER.COST} points (you have ${PROFILE.points || 0})`, true);
+    if (!confirm(`Make a new level for ${LMAKER.COST} points? Editing, playing and publishing it are free.`)) return;
+    try {
+      const r = await api("lvlNew"); setProfile(r.me); mkDrafts = r.drafts;
+      AR = arStarter(); arSel = -1; mkSelect(r.id, true);
+      toast("New level made. Build it, then press Play it or Save.");
+    } catch (e) { toast(e.message, true); }
+  };
+  el("mkSaveBtn").onclick = () => mkSave().then(ok => ok && toast("Saved"));
+  el("mkDraftDel").onclick = async () => {
+    const d = mkDrafts.find(x => x.id === mkDraft); if (!d || !confirm(`Delete "${d.name}"? You won't get the ${LMAKER.COST} points back. (Published copies stay on the list.)`)) return;
+    try { mkDrafts = (await api("lvlDraftDelete", { id: d.id })).drafts; mkSelect(mkDrafts.length ? mkDrafts[mkDrafts.length - 1].id : null); } catch (e) { toast(e.message, true); }
+  };
+  el("mkDraftSel").onchange = async () => { if (mkDirty()) await mkSave(); mkSelect(el("mkDraftSel").value); };
+}
+async function mkDraftsLoad() {
+  try { const r = await api("lvlList"); mkData = r; mkDrafts = r.drafts || []; } catch (e) { return; }
+  mkSelect(mkDrafts.some(x => x.id === mkDraft) ? mkDraft : mkDrafts.length ? mkDrafts[mkDrafts.length - 1].id : null);
+}
+// open one of your levels in the editor
+function mkSelect(id, fresh) {
+  mkDraft = id || null; try { id ? localStorage.setItem("cc_draft", id) : localStorage.removeItem("cc_draft"); } catch (e) {}
+  const d = mkDrafts.find(x => x.id === mkDraft);
+  el("mkDraftSel").innerHTML = mkDrafts.map(x => `<option value="${esc(x.id)}" ${x.id === mkDraft ? "selected" : ""}>${esc(x.name || "New level")}</option>`).join("") || "<option>No levels yet</option>";
+  el("mkDraftSel").disabled = !mkDrafts.length; el("mkDraftDel").hidden = !d; el("mkSaveBtn").hidden = !d;
+  el("mkLocked").hidden = !!d; el("mkEditor").hidden = !d;
+  el("mkNewBtn").textContent = `New level · ${LMAKER.COST}`;
+  mkSaved = d && d.code || ""; mkSavedBody = mkSaved.split(".")[0];
+  if (d && d.code && !fresh) {
+    const lv = levelFromCode(d.code);
+    if (lv && lv.data.v === 2) { AR = JSON.parse(JSON.stringify(lv.data)); arSel = AR.e.length ? 0 : -1; mkSetMode("build"); arShow(); }
+    else if (lv) { qkShow(lv.data); mkSetMode("quick"); }
+  } else if (d) { mkSetMode("build"); arShow(); }
+  mkUpdate();
+}
+function qkShow(x) {        // a Quick level -> the sliders
+  el("mkName").value = x.n || ""; el("mkType").value = x.t; el("mkLanes").value = x.l; el("mkSpeed").value = Math.round(x.s * 100);
+  if (x.w) el("mkWaves").value = x.w; if (x.b) el("mkBalls").value = x.b; if (x.k) el("mkNeed").value = x.k; if (x.h) el("mkHp").value = x.h;
+  document.querySelectorAll("[data-mod]").forEach(i => { i.value = (x.m && x.m[i.dataset.mod]) || 0; });
+  el("mkInv").checked = !!x.inv; el("mkDel").checked = !!x.del;
+}
+function mkSetMode(m) { mkMode = m; document.querySelectorAll("[data-mkmode]").forEach(x => x.classList.toggle("active", x.dataset.mkmode === m)); el("mkBuild").hidden = m !== "build"; el("mkQuick").hidden = m !== "quick"; }
+function mkLocal() { return levelToCode(mkMode === "build" ? AR : mkLevel()); }       // what's on screen (not signed yet)
+function mkDirty() { return !!mkDraft && mkLocal().slice(4) !== mkSavedBody.slice(4); }
+// save to the server (free): it checks the level and signs the code. Resolves true when saved.
+async function mkSave() {
+  if (!mkDraft) { toast(`Make a new level first (${LMAKER.COST} points)`, true); return false; }
+  if (!mkDirty() && mkSaved) return true;
+  try {
+    const r = await api("lvlSave", { id: mkDraft, code: mkLocal() });
+    mkDrafts = r.drafts; mkSaved = r.code; mkSavedBody = r.code.split(".")[0];
+    const sel = el("mkDraftSel").querySelector(`option[value="${mkDraft}"]`), d = mkDrafts.find(x => x.id === mkDraft); if (sel && d) sel.textContent = d.name;
+    mkUpdate(); return true;
+  } catch (e) { toast(e.message, true); return false; }
+}
+function mkShowCode() {
+  const dirty = mkDirty();
+  el("mkCode").value = dirty || !mkSaved ? "Save (free) to get the share code" : mkSaved;
+  el("mkSaveState").textContent = !mkDraft ? "" : dirty || !mkSaved ? "Unsaved changes" : "Saved";
 }
 document.querySelectorAll("[data-mk]").forEach(b => b.onclick = () => mkTab(b.dataset.mk));
 function mkTab(name) {
@@ -37,7 +104,7 @@ function mkLevel() {
     w: v("mkWaves"), b: v("mkBalls"), k: v("mkNeed"), h: v("mkHp"), m, inv: el("mkInv").checked ? 1 : 0, del: el("mkDel").checked ? 1 : 0 };
 }
 function mkUpdate() {
-  if (mkMode === "build") { arRead(); arDraw(); el("mkCode").value = levelToCode(AR); try { localStorage.setItem("cc_ar", JSON.stringify(AR)); } catch (e) {} return; }
+  if (mkMode === "build") { arRead(); arDraw(); mkShowCode(); return; }
   const t = el("mkType").value;
   el("makerModal").querySelectorAll("[data-for]").forEach(x => x.hidden = !x.dataset.for.split(" ").includes(t));
   el("mkWaves").max = t === "boss" ? 40 : 20; el("mkWaves").min = t === "boss" ? 10 : 3;
@@ -46,19 +113,20 @@ function mkUpdate() {
   el("mkNeedV").textContent = el("mkNeed").value; el("mkHpV").textContent = el("mkHp").value;
   el("mkSpeedV").textContent = sp === 100 ? "normal" : sp < 100 ? `${100 - sp}% faster` : `${sp - 100}% slower`;
   document.querySelectorAll("[data-mod]").forEach(i => { el("mkM_" + i.dataset.mod + "V").textContent = i.value + "%"; });
-  el("mkCode").value = levelToCode(mkLevel());
+  mkShowCode();
 }
 function playLevelCode(code, id) {
   if (!levelFromCode(code)) return toast("That isn't a level code", true);
   JOIN_EXTRA = "&lvl=" + encodeURIComponent(code) + (id ? "&lvlid=" + id : "");
   enterRoom(async () => "CUSTOM" + Math.random().toString(36).slice(2, 10).toUpperCase()).finally(() => { JOIN_EXTRA = ""; });
 }
-el("mkPlay").onclick = () => playLevelCode(el("mkCode").value);
-el("mkCopy").onclick = async () => { try { await navigator.clipboard.writeText(el("mkCode").value); toast("Level code copied: send it to a friend!"); } catch (e) { el("mkCode").select(); toast("Select the code and copy it"); } };
+el("mkPlay").onclick = async () => { if (await mkSave()) playLevelCode(mkSaved); };
+el("mkCopy").onclick = async () => { if (!(await mkSave())) return; try { await navigator.clipboard.writeText(mkSaved); toast("Level code copied: send it to a friend!"); } catch (e) { el("mkCode").select(); toast("Select the code and copy it"); } };
 el("mkPasteBtn").onclick = async () => { try { el("mkPlayCode").value = (await navigator.clipboard.readText()).trim(); } catch (e) { el("mkPlayCode").focus(); toast("Press Ctrl+V to paste the code"); } };
 el("mkPlayCodeBtn").onclick = () => playLevelCode(el("mkPlayCode").value.trim());
 el("mkPublish").onclick = async () => {
-  try { const r = await api("lvlPublish", { code: el("mkCode").value }); toast("Published! It shows on the list within 10 minutes."); if (mkData) mkData.mine = r.mine; mkTab("mine"); }
+  if (!(await mkSave())) return;
+  try { const r = await api("lvlPublish", { code: mkSaved }); toast("Published! It shows on the list within 10 minutes."); if (mkData) mkData.mine = r.mine; mkTab("mine"); }
   catch (e) { toast(e.message, true); }
 };
 
@@ -98,7 +166,6 @@ async function mkLoad() {
 // ======================================================================
 let mkMode = "build", arTool = "dot", arSel = -1, arHot = -1;
 let AR = arStarter();
-try { const saved = JSON.parse(localStorage.getItem("cc_ar") || "null"); if (saved && saved.v === 2) AR = saved; } catch (e) {}   // your level is kept while you play-test it
 function arStarter() {
   return { v: 2, n: "", p: [[6, 6], [6, 15], [6, 24], [15, 15]], a: [1, 2, 3, 0], st: 1,
     e: [{ n: "Bob", x: 38, y: 9, m: [[38, 21]], ms: 3, r: 1800, wh: 40, a: "you", pt: [], t: [[1, "Catch this!"]] }], k: 5, w: 45, l: 3, sp: 1, i: "" };
@@ -113,7 +180,11 @@ function arInit() {
   el("arHelp").textContent = AR_HELP.dot;
   el("arClear").onclick = () => { if (!confirm("Clear the whole level?")) return; AR = { v: 2, n: AR.n, p: [], a: [], st: 0, e: [], k: AR.k, w: AR.w, l: AR.l, sp: AR.sp, i: AR.i }; arSel = -1; arShow(); };
   el("arCanvas").addEventListener("pointerdown", arClick);
-  el("arLoadBtn").onclick = () => { const lv = levelFromCode(el("arLoad").value); if (!lv || lv.data.v !== 2) return toast("That isn't a Build-your-own level code", true); AR = JSON.parse(JSON.stringify(lv.data)); arSel = AR.e.length ? 0 : -1; arShow(); toast("Loaded. Change it, then Play or Publish."); };
+  el("arLoadBtn").onclick = () => {        // copy any level code into the level you have open (then Save it as yours)
+    const lv = levelFromCode(el("arLoad").value); if (!lv) return toast("That isn't a level code", true);
+    if (lv.data.v === 2) { AR = JSON.parse(JSON.stringify(lv.data)); arSel = AR.e.length ? 0 : -1; mkSetMode("build"); arShow(); } else { qkShow(lv.data); mkSetMode("quick"); mkUpdate(); }
+    toast("Loaded into this level. Change it, then Save or Play.");
+  };
   arShow();
 }
 // level -> the inputs
