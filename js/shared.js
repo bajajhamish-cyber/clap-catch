@@ -51,7 +51,7 @@ const RULES = {
   neutralise:    { name: "Neutralise",      type: "ability", limited: true, icon: "🚫", desc: "Costs 5 of your points. Click a player: all their abilities are used up for this round." },
   heavenlyWrath: { name: "Heavenly Wrath",  type: "ability", limited: true, icon: "⚖️", desc: "Give a player 5 of your points. Then there's a 50% chance they're OUT." },
   // Devil
-  hellfire:      { name: "Hellfire",        type: "ability", limited: true, icon: "😈", desc: "While you hold the ball: your next throw is 1.5x slower, and turns into a fireball when it's 20% away from them. Catch after that = OUT." },
+  hellfire:      { name: "Hellfire",        type: "ability", limited: true, icon: "😈", desc: "While you hold the ball: your next throw leaves a wall of flame on the floor between you and whoever you throw to. For the next 2 turns, nobody can throw across it (unless they're forced to). Throw across the circle to split it. Needs 4+ players." },
   jumpScare:     { name: "Jump Scare",      type: "ability", limited: true, icon: "👹", desc: "Jump scares a random player. It could be you! Not while you hold the ball." },
   phantomThrow:  { name: "Phantom Throw",   type: "ability", limited: true, icon: "🎭", desc: "While you hold the ball: your aim line is hidden and you throw two balls. One is a see-through fake: clap for the fake and you're OUT." },
   vengeance:     { name: "Vengeance",       type: "ability", limited: true, icon: "🗡️", desc: "After you're knocked out, within 1 turn: whoever got you out is OUT too." },
@@ -113,7 +113,7 @@ const PLATINUM = {
   fullWipe: "2 uses each round.",
   neutralise: "Only costs 2 points.",
   heavenlyWrath: "75% chance they're out.",
-  hellfire: "Turns to fire earlier, at 65% of the way.",
+  hellfire: "The wall lasts 3 turns.",
   jumpScare: "Never scares you.",
   phantomThrow: "Throws two fakes as well as the real ball.",
   vengeance: "Works up to 2 turns after you're out.",

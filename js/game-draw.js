@@ -76,6 +76,20 @@ function draw(pos0, t) {
   const holderAim = holder === me.id ? lockedTarget : (holderP ? holderP.aim : null);
   const forced = holder ? forcedSet(holder).length > 0 : false;
 
+  // Hellfire: a wall of flame on the floor between two players. Nobody can throw across it.
+  if (S && S.wall && pos[S.wall.a] && pos[S.wall.b]) {
+    const a = pos[S.wall.a], b = pos[S.wall.b], tt = performance.now() / 1000, n = 26;
+    ctx.save(); ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(255,90,0,.35)"; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    for (let i = 1; i < n; i++) {                       // flickering flames along the line
+      const f = i / n, x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, h = 10 + 8 * Math.abs(Math.sin(tt * 7 + i * 1.7));
+      const g = ctx.createLinearGradient(x, y, x, y - h); g.addColorStop(0, "rgba(255,80,0,.95)"); g.addColorStop(0.6, "rgba(255,190,0,.8)"); g.addColorStop(1, "rgba(255,240,150,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 6, y + 2); ctx.quadraticCurveTo(x, y - h * 1.3, x + 6, y + 2); ctx.fill();
+    }
+    ctx.fillStyle = "#ffb74d"; ctx.font = "bold 13px Nunito, system-ui"; ctx.textAlign = "center";
+    ctx.fillText(`🔥 WALL OF FLAME · ${S.wall.left} turn${S.wall.left === 1 ? "" : "s"}`, (a.x + b.x) / 2, (a.y + b.y) / 2 - 18);
+    ctx.restore();
+  }
   // aim line
   const smoked = ball && ball.smoke && !ball.nullified && holder && holder !== me.id;       // Smokescreen: you can't see their bar (Platinum: or aim)
   if (holder && holderAim && pos[holder] && pos[holderAim] && !(smoked && ball.smoke === 2)) {
@@ -167,7 +181,7 @@ function draw(pos0, t) {
     if (heldBy && id === me.id && ball.boomerang) tags.push("🪃 boomerang");
     if (heldBy && ball.warcry) tags.push("📢 can't stop!");
     if (heldBy && id === me.id && ball.ghost) tags.push("👻 ghost throw");
-    if (heldBy && id === me.id && ball.hellfire) tags.push("😈 hellfire");
+    if (heldBy && id === me.id && ball.hellfire) tags.push("😈 wall of flame next throw");
     if (heldBy && id === me.id && ball.phantom) tags.push("🎭 phantom");
     if (p.silenced && p.silenced >= TURN && !p.out) tags.push("🤫 silenced");
     if (!p.out && p.cornered && TURN < p.cornered) tags.push("🦬 neighbours only");
@@ -232,8 +246,8 @@ function draw(pos0, t) {
       }
       bx = a.x + (b.x - a.x) * p; by = a.y + (b.y - a.y) * p;
       scale = 1 + Math.sin(p * Math.PI) * 0.6;
-      const hellAt = ball.hellfire === true ? 0.8 : ball.hellfire, ghostTo = ball.ghost === 2 ? 0.97 : 0.9;
-      fire = !ball.nullified && (ball.fireball || (ball.hellfire && p >= hellAt));
+      const ghostTo = ball.ghost === 2 ? 0.97 : 0.9;
+      fire = !ball.nullified && !!ball.fireball;
       if (ball.ghost && !ball.nullified && ball.from !== me.id && p < ghostTo) bx = undefined;       // Ghost Ball: invisible until it's nearly there
       [ball.fake, ball.fake2].forEach(fk => {                                                        // Phantom Throw: see-through fakes
         if (!fk || !pos[fk] || ball.nullified) return;
@@ -345,7 +359,7 @@ function draw(pos0, t) {
   }
   else if (ballComingToMe() && ball.ghost && !ball.nullified && localProgress(ball) < 0.9) msg = "Watch the thrower… B = clap, SPACE = catch";
   else if (ballComingToMe() && ball.platFire && !ball.nullified) msg = "💎🔥 PLATINUM FIREBALL! DON'T CLAP, DON'T CATCH!";
-  else if (ballComingToMe()) msg = (ball.fireball || (ball.hellfire && localProgress(ball) >= (ball.hellfire === true ? 0.8 : ball.hellfire))) && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
+  else if (ballComingToMe()) msg = ball.fireball && !ball.nullified ? "🔥 FIREBALL! Don't catch it!" : `IT'S COMING TO YOU! B${hasRule("doubleClap") ? " B" : ""} then SPACE`;
   else if (ball.state === "held" && !ball.nullified && (doubles[ball.holder] || {})[me.id]) msg = `G G G to sacrifice and take ${nm(ball.holder)} out with you`;
   else msg = "Watch the thrower… B = clap, SPACE = catch";
   ctx.fillText(msg, 480, 330);
