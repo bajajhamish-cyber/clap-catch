@@ -549,3 +549,19 @@ body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }
 #mtCard .mtTop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
 #mtCard .mtTop b { font-size: 17px; color: #ffd54f; }
 #mtCard .mtNav { margin-top: 12px; gap: 8px; }
+
+/* "Still there?" warning before an idle game closes */
+#idleBanner { display: none; position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 70; background: #ffd54f; color: #1a1a1a; font-weight: 700;
+  padding: 12px 20px; border-radius: 10px; box-shadow: 0 8px 30px #000a; font-size: 15px; max-width: 92vw; text-align: center; }
+
+/* owner stats */
+.osCards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+.osCard { background: #171a21; border-radius: 10px; padding: 10px; font-size: 12.5px; color: #aab; }
+.osBig { font-size: 26px; font-weight: 800; color: #fff; }
+.osBar { margin: 8px 0; }
+.osTrack { height: 10px; background: #2a2e38; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+.osTrack div { height: 100%; border-radius: 6px; }
+.osTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.osTable th, .osTable td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #2a2e38; }
+.osTable th { color: #9aa3b5; font-weight: 600; }
+#osBody h4 { margin: 14px 0 6px; }

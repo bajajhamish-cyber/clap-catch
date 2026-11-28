@@ -33,6 +33,24 @@ let dispAng = {}, lastPos = {};
 
 function say(msg) { flash = { msg, until: performance.now() + 2200 }; }
 function send(msg) { if (sock && sock.readyState === 1) sock.send(JSON.stringify(msg)); }
+// ---------------------------------------------------------------- "Still there?" (empty games close to keep the game free)
+let idleTimer = null, idleLeft = 0, hereAt = 0;
+function idleShow(left) {
+  const b = el("idleBanner"); clearInterval(idleTimer); idleLeft = left || 0;
+  if (!idleLeft) { b.style.display = "none"; return; }
+  const draw = () => { b.innerHTML = `💤 Still there? <b>Press any key or click</b> to stay in the game. Closing in ${Math.max(0, idleLeft)}s`; };
+  draw(); b.style.display = "block"; idleTimer = setInterval(() => { idleLeft--; draw(); if (idleLeft <= 0) clearInterval(idleTimer); }, 1000);
+}
+// any key or click counts as "I'm here" (sent at most every 20 seconds, or straight away while the warning shows)
+function imHere() {
+  const t = performance.now(), warn = el("idleBanner") && el("idleBanner").style.display === "block";
+  if (!warn && t - hereAt < 20000) return;
+  hereAt = t;
+  if (sock && sock.readyState === 1) send({ t: "here" });
+  if (typeof MG_SOCK !== "undefined" && MG_SOCK && MG_SOCK.readyState === 1) MG_SOCK.send(JSON.stringify({ t: "here" }));
+  if (warn) idleShow(0);
+}
+addEventListener("keydown", imHere, true); addEventListener("pointerdown", imHere, true);
 
 // ---------------------------------------------------------------- joining a room
 function joinGame(key) {
@@ -48,7 +66,9 @@ function joinGame(key) {
       else if (m.t === "ping") send({ t: "pong", s: m.s });
       else if (m.t === "err") say(m.m);
       else if (m.t === "error") { if (!settled) { settled = true; if (/daily limit/i.test(m.m)) checkLimit(); reject(new Error(m.m)); } }
-      else if (m.t === "kicked") { toast(m.m, true); setTimeout(() => location.reload(), 2500); joinedOK = false; }
+      else if (m.t === "kicked") { idleShow(0); toast(m.m, true); setTimeout(() => location.reload(), 2500); joinedOK = false; }
+      else if (m.t === "idleWarn") idleShow(m.left);
+      else if (m.t === "idleOk") idleShow(0);
       else if (m.t === "points" && typeof onPoints === "function") onPoints(m.points);
       else if (m.t === "quests" && m.done) m.done.forEach(t => toast(`🎯 Quest done: ${t}! Claim it in the Quests tab.`));
     };

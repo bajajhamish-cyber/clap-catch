@@ -104,6 +104,7 @@ async function refreshAdmin() {
     el("adminWorld2Btn").textContent = adminCfg.world2 ? "ON" : "OFF";
     el("adminWorld2Btn").style.background = adminCfg.world2 ? "#1f6f3a" : "#555";
     // World 3: only bajajhamish. World 4: only bajajhamish until he's switched it on once, then kythor too
+    el("statsTabBtn").hidden = !owner;
     el("adminWorld3Row").hidden = !owner; el("adminWorld4Row").hidden = !(owner || adminCfg.world4Opened);
     el("adminWorld34").hidden = el("adminWorld3Row").hidden && el("adminWorld4Row").hidden;
     const w3 = adminCfg.world3 !== false;
@@ -132,7 +133,54 @@ function adminTab(name) {
   if (name === "you") refreshYou();
   if (name === "wheel") { refreshWheel(); refreshSure(); }
   if (name === "main") refreshMiniAdmin();
+  if (name === "stats") refreshStats();
 }
+// ---------------------------------------------------------------- owner stats (bajajhamish only: the server checks)
+async function refreshStats() {
+  const box = el("osBody");
+  let d; try { d = await api("ownerStats"); } catch (e) { box.innerHTML = `<div class="muted">${esc(e.message)}</div>`; return; }
+  const n = x => Math.round(x || 0).toLocaleString(), sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
+  const today = d.days[d.days.length - 1] || { players: 0, newAcc: 0, games: {}, wins: {}, roomSecs: {}, lvlNew: 0, lvlPub: 0, lvlBeat: 0, minis: {} };
+  const fsT = (d.fs[d.fs.length - 1] || [null, [0, 0, 0]])[1], cfT = (d.cf[d.cf.length - 1] || [null, [0, 0]])[1];
+  const hrs = s => (s / 3600);
+  const at = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (new Date(t).toDateString() !== new Date().toDateString() ? " tomorrow" : "");
+  const bar = (label, v, max, note, fmt) => {
+    const p = Math.min(100, (v / max) * 100), col = p >= 80 ? "#e53935" : p >= 50 ? "#ffb300" : "#43a047";
+    return `<div class="osBar"><div class="row" style="justify-content:space-between"><b>${label}</b><span>${fmt ? fmt(v) : n(v)} / ${n(max)} <span class="muted small">(${p.toFixed(0)}%)</span></span></div>
+      <div class="osTrack"><div style="width:${p}%;background:${col}"></div></div>${note ? `<div class="muted small">${note}</div>` : ""}</div>`;
+  };
+  const roomHrsToday = hrs(sum(today.roomSecs));
+  const liveRooms = d.live ? sum(d.live.rooms) : null;
+  let h = `<div class="osCards">
+    <div class="osCard"><div class="osBig">${liveRooms == null ? "?" : n(liveRooms)}</div>games open now${d.live ? ` · ${n(d.live.players)} players in them` : ""}</div>
+    <div class="osCard"><div class="osBig">${n(today.players)}</div>players today</div>
+    <div class="osCard"><div class="osBig">${n(today.newAcc)}</div>new accounts today</div>
+    <div class="osCard"><div class="osBig">${n(sum(today.games))}</div>games played today</div></div>
+  <h4>Today vs the free limits</h4>
+  ${bar("Database reads (Firebase)", fsT[0], d.limits.fsReads, `Resets at ${at(d.resets.firebase)} (midnight in California). If this runs out, nobody can log in or save.`)}
+  ${bar("Database writes (Firebase)", fsT[1], d.limits.fsWrites, "Saving accounts, games, trades, messages.")}
+  ${fsT[2] ? bar("Database deletes (Firebase)", fsT[2], d.limits.fsDeletes) : ""}
+  ${bar("≈ Requests (Cloudflare)", cfT[0] + cfT[1], d.limits.requests, `Player requests ${n(cfT[0])} + game connections ${n(cfT[1])}. Resets at ${at(d.resets.cloudflare)} (midnight UTC).`)}
+  ${bar("≈ Game-room hours (Cloudflare)", roomHrsToday, d.limits.roomHours, "How long games were open today. The free plan keeps rooms awake for about 28 hours a day in total. Closing idle games keeps this down.", v => v.toFixed(1))}
+  <h4>Games today</h4>`;
+  const kinds = Object.keys(Object.assign({}, today.games, today.roomSecs)).sort((a, b) => (today.games[b] || 0) - (today.games[a] || 0));
+  h += kinds.length ? `<table class="osTable"><tr><th>Kind</th><th>Games</th><th>Room hours</th></tr>${kinds.map(k => `<tr><td>${esc(k)}</td><td>${n(today.games[k])}</td><td>${hrs(today.roomSecs[k] || 0).toFixed(1)}</td></tr>`).join("")}</table>` : `<div class="muted small">No games yet today.</div>`;
+  const mi = Object.entries(today.minis || {});
+  h += `<div class="small" style="margin-top:6px">Level Maker today: <b>${n(today.lvlNew)}</b> made · <b>${n(today.lvlPub)}</b> published · <b>${n(today.lvlBeat)}</b> beaten${mi.length ? ` · Minigame results: ${mi.map(([k, v]) => `${esc(k)} ${n(v)}`).join(", ")}` : ""}</div>`;
+  // last 7 days
+  const fsBy = Object.fromEntries(d.fs), cfBy = Object.fromEntries(d.cf);
+  h += `<h4>Last 7 days</h4><table class="osTable"><tr><th>Day</th><th>Players</th><th>New</th><th>Games</th><th>Room hrs</th><th>DB reads*</th><th>DB writes*</th><th>Requests*</th></tr>
+    ${d.days.slice().reverse().map(x => { const f = fsBy[x.day] || [0, 0, 0], c = cfBy[x.day] || [0, 0]; return `<tr><td>${x.day.slice(5)}</td><td>${n(x.players)}</td><td>${n(x.newAcc)}</td><td>${n(sum(x.games))}</td><td>${hrs(sum(x.roomSecs)).toFixed(1)}</td><td>${n(f[0])}</td><td>${n(f[1])}</td><td>${n(c[0] + c[1])}</td></tr>`; }).join("")}</table>
+    <div class="muted small">*Database numbers are per California day and requests per UTC day (that's when their limits reset), so they're a few hours off from the Sydney day.</div>`;
+  // abilities
+  const ab = Object.entries(d.abilities || {}).map(([id, [u, w]]) => ({ id, u, w, p: u ? w / u : 0 })).sort((a, b) => b.u - a.u);
+  h += `<h4>Abilities (last 7 days)</h4>`;
+  h += ab.length ? `<div class="muted small">"Win %": how often the player who used it went on to win that round. With 4 to 6 players, about 20% is normal. ⚠️ = wins a lot (40%+, used in 10+ rounds).</div>
+    <table class="osTable"><tr><th>Ability</th><th>Rounds used</th><th>Win %</th></tr>${ab.slice(0, 30).map(x => `<tr><td>${esc((RULES[x.id] && RULES[x.id].name) || x.id)}</td><td>${n(x.u)}</td><td>${(x.p * 100).toFixed(0)}%${x.u >= 10 && x.p >= 0.4 ? " ⚠️" : ""}</td></tr>`).join("")}</table>`
+    : `<div class="muted small">No abilities used yet.</div>`;
+  box.innerHTML = h;
+}
+el("osRefresh").onclick = () => refreshStats();
 document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => adminTab(b.dataset.atab));
 let secretKeys = "";
 document.addEventListener("keydown", e => {

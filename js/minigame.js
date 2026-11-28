@@ -72,7 +72,9 @@ function joinMini(key) {
       else if (m.t === "ping") mgSend({ t: "pong", s: m.s });
       else if (m.t === "err") toast(m.m, true);
       else if (m.t === "error") { if (!settled) { settled = true; reject(new Error(m.m)); } }
-      else if (m.t === "kicked") { toast(m.m, true); setTimeout(() => location.reload(), 2500); mgJoined = false; }
+      else if (m.t === "kicked") { idleShow(0); toast(m.m, true); setTimeout(() => location.reload(), 2500); mgJoined = false; }
+      else if (m.t === "idleWarn") idleShow(m.left);
+      else if (m.t === "idleOk") idleShow(0);
       else if (m.t === "points") { onPoints(m.points); el("miniPoints").textContent = "⭐ " + m.points; }
     };
     ws.onclose = () => {

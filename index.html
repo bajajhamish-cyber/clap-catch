@@ -393,6 +393,7 @@
     <button type="button" data-atab="main" class="active">Main</button>
     <button type="button" data-atab="ann" id="annTabBtn" hidden>Announcements</button>
     <button type="button" data-atab="og" id="ogTabBtn" hidden>OG skins</button>
+    <button type="button" data-atab="stats" id="statsTabBtn" hidden>📊 Stats</button>
     <button type="button" data-atab="wheel" hidden>🎡 Wheel</button>
     <button type="button" data-atab="you" hidden>You</button>
   </nav>
@@ -526,6 +527,11 @@
       <div id="wheelPending" class="small"></div>
     </div>
   </div>
+  <div class="adminPane" data-apane="stats" hidden>
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0">📊 Owner stats</h3><button type="button" class="secondary" id="osRefresh">Refresh</button></div>
+    <div class="muted small">Only you can see this. Numbers marked ≈ are counted by the server and are close, not exact: the Cloudflare and Firebase dashboards have the official numbers.</div>
+    <div id="osBody"><div class="muted">Loading…</div></div>
+  </div>
   <div class="adminPane" data-apane="og" hidden>
     <div class="card">
       <h3 style="margin-top:0">OG skins</h3>
@@ -582,6 +588,7 @@
   <div id="noticeList"></div>
   <button type="button" id="noticeClose">Got it!</button>
 </div></div>
+<div id="idleBanner"></div>
 <div id="flvModal"><div class="box">
   <div class="row" style="justify-content:space-between"><h2 id="flvTitle" style="margin:0">🏁 Levels beaten</h2><button type="button" class="ghost" id="flvClose">Close</button></div>
   <div class="muted small">Level Maker levels they've beaten (the last 50). There's no reward for these, just bragging rights.</div>
