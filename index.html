@@ -157,13 +157,14 @@
   </div>
 
 <div id="tab-maker" class="tab" hidden><div id="makerModal" class="card makerBox">
-  <div><h2 style="margin:0">Level Maker</h2><div class="muted small">Make your own levels, share them with a code, and play everyone else's. Unlocked by beating World 4.</div></div>
+  <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">Level Maker</h2><div class="muted small">Make your own levels, share them with a code, and play everyone else's. Unlocked by beating World 4.</div></div>
+      <div class="row"><button type="button" class="secondary" id="mkTourBtn">📖 Tutorial</button><label class="chk small"><input type="checkbox" id="mkDimFx"> Dim flashes</label></div></div>
   <div class="makerTabs"><button type="button" data-mk="make" class="active">Make</button><button type="button" data-mk="browse">Play levels</button><button type="button" data-mk="mine">My levels</button></div>
   <div data-mkpane="make">
     <div class="row mkDraftRow"><b>Your level</b> <select id="mkDraftSel"></select>
       <button type="button" id="mkNewBtn">New level · 150</button><button type="button" class="secondary" id="mkSaveBtn">Save</button><button type="button" class="secondary" id="mkDraftDel">Delete</button>
       <span class="muted small" id="mkSaveState"></span></div>
-    <div id="mkLocked" class="card mkEnemy" hidden><b>Making a level costs 150 points.</b> <span class="muted small">Press "New level" to start one. Editing it, playing it, sharing its code and publishing it are all free after that. You can keep 10 levels.</span></div>
+    <div id="mkLocked" class="card mkEnemy" hidden><b>Making a level costs 150 points.</b> <span class="muted small">Press "New level" to start one. Editing it, playing it, sharing its code and publishing it are all free after that. You can keep 10 levels. New here? Press <b>📖 Tutorial</b> to see how everything works first.</span></div>
     <div id="mkEditor">
     <div class="mkModes"><button type="button" data-mkmode="build" class="active">Build your own</button><button type="button" data-mkmode="quick">Quick level</button></div>
     <div id="mkBuild">
@@ -178,12 +179,19 @@
         <button type="button" class="secondary" id="arClear">Clear all</button>
       </div>
       <div class="muted small" id="arHelp"></div>
+      <div class="row" style="justify-content:space-between"><b id="arPhLabel">Phase 1</b><span class="muted small">Click a phase on the timeline below to edit it</span></div>
       <canvas id="arCanvas" width="960" height="640"></canvas>
+      <div class="mkTimeline">
+        <div class="row" style="justify-content:space-between"><div><b>Timeline</b> <span class="muted small" id="tlInfo"></span></div>
+          <div class="row"><button type="button" class="secondary" id="tlAddPhase">+ Phase</button><button type="button" class="secondary" id="tlDelPhase">Delete this phase</button></div></div>
+        <div class="muted small">Phases: click one to edit it, drag its right edge to change how long it lasts (the last edge is the end of the level, 120s at most). Speech and Effects: click the row to add one, drag it to move it, click it to change it.</div>
+        <canvas id="tlCanvas" width="960" height="190"></canvas>
+        <div id="tlBox" class="card mkEnemy" hidden></div>
+      </div>
       <div class="makerGrid">
         <label>Name <input id="arName" maxlength="24" placeholder="My level"></label>
-        <label>To win <select id="arWin"><option value="catch">Catch white balls</option><option value="survive">Survive</option></select></label>
-        <label id="arKL">White balls to catch <b id="arKV"></b><input id="arK" type="range" min="1" max="30" value="5"></label>
-        <label id="arWL" hidden>Seconds to survive <b id="arWV"></b><input id="arW" type="range" min="10" max="180" step="5" value="45"></label>
+        <label>To win <select id="arWin"><option value="catch">Catch white balls</option><option value="survive">Survive to the end</option></select></label>
+        <label id="arKL">White balls to catch before the end <b id="arKV"></b><input id="arK" type="range" min="1" max="30" value="5"></label>
         <label>Lives <b id="arLV"></b><input id="arL" type="range" min="1" max="5" value="3"></label>
         <label>Ball speed <b id="arSpV"></b><input id="arSp" type="range" min="60" max="160" step="10" value="100"></label>
         <label style="grid-column:1/-1">Intro line (said at the start) <input id="arIntro" maxlength="60" placeholder="Welcome to my level!"></label>
@@ -197,8 +205,7 @@
           <label>Shoots at <select id="arEnA"><option value="you">You (wherever you are)</option><option value="rand">Random dots</option><option value="pat">A set pattern</option></select></label>
           <label>Walk speed <b id="arEnMsV"></b><input id="arEnMs" type="range" min="0" max="8" step="0.5" value="3"></label>
         </div>
-        <div class="small"><b>Things it says</b> <span class="muted">(at a time in seconds; swear words aren't allowed)</span></div>
-        <div id="arLines"></div>
+        <div class="muted small">What enemies say goes on the Speech row of the timeline.</div>
       </div>
       <div class="row"><input id="arLoad" placeholder="Paste any level code to copy it into this level (CC4-…)"><button type="button" class="secondary" id="arLoadBtn">Copy into this level</button></div>
     </div>
@@ -575,6 +582,18 @@
   <div id="noticeList"></div>
   <button type="button" id="noticeClose">Got it!</button>
 </div></div>
+<div id="flvModal"><div class="box">
+  <div class="row" style="justify-content:space-between"><h2 id="flvTitle" style="margin:0">🏁 Levels beaten</h2><button type="button" class="ghost" id="flvClose">Close</button></div>
+  <div class="muted small">Level Maker levels they've beaten (the last 50). There's no reward for these, just bragging rights.</div>
+  <div id="flvList" class="mkList"></div>
+</div></div>
+<div id="epiModal"><div class="box">
+  <h2>⚠️ Flashing lights warning</h2>
+  <p>Levels made by players can have <b>flashing lights, flashing colours and screen shaking</b>. These can trigger seizures in people with photosensitive epilepsy.</p>
+  <p class="muted small">If you or anyone in your family has epilepsy or has had a seizure, don't play these levels without checking with a doctor first. Stop playing straight away if you feel dizzy, your vision changes, or your eyes or muscles twitch.</p>
+  <label class="chk"><input type="checkbox" id="epiDim"> Dim flashes (makes flashes much softer in every made level)</label>
+  <div class="row" style="justify-content:flex-end"><button type="button" class="secondary" id="epiBack">Back</button><button type="button" id="epiGo">I understand, play</button></div>
+</div></div>
 <div id="newsModal"><div class="box">
   <h2>What's new</h2>
   <div id="newsBody">
@@ -642,6 +661,7 @@
 <script src="js/minigame.js"></script>
 <script src="js/arena.js"></script>
 <script src="js/maker.js"></script>
+<script src="js/maker-tour.js"></script>
 <script src="js/hub.js"></script>
 </body>
 </html>

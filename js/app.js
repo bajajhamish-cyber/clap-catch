@@ -153,6 +153,7 @@ function renderFriends() {
       <span class="tag">Level ${f.level || 1}</span> <span class="muted small">${f.game ? gameLabel(f.game) : f.online ? "online" : "offline"}</span></div>
       <div class="row">${f.game ? `<button type="button" data-fr-join="${esc(f.uid)}" ${canJoin ? "" : "disabled"}>${canJoin ? "Join" : "Can't join"}</button>` : ""}
       <button type="button" class="secondary small" data-fr-chat="${esc(f.uid)}" data-name="${esc(f.username)}">💬 Chat${f.unread ? ` <span class="unread">${f.unread}</span>` : ""}</button>
+      ${PROFILE.world4 ? `<button type="button" class="secondary small" data-fr-levels="${esc(f.uid)}">🏁 Levels beaten</button>` : ""}
       <button type="button" class="ghost small" data-fr-remove="${esc(f.uid)}" data-name="${esc(f.username)}">Remove</button></div></div>`;
   }).join("") : "<div class='muted'>No friends yet. Add someone by their username!</div>";
   const act = (op, args, msg) => api(op, args).then(() => { if (msg) toast(msg); refreshFriends(); }).catch(e => toast(e.message, true));
@@ -162,7 +163,19 @@ function renderFriends() {
   document.querySelectorAll("[data-fr-remove]").forEach(b => b.onclick = () => { if (confirm(`Remove ${b.dataset.name} from your friends?`)) act("friendRemove", { uid: b.dataset.frRemove }, "Removed"); });
   document.querySelectorAll("[data-fr-chat]").forEach(b => b.onclick = () => openDm(b.dataset.frChat, b.dataset.name));
   document.querySelectorAll("[data-fr-join]").forEach(b => b.onclick = () => enterRoom(async () => (await api("joinFriend", { uid: b.dataset.frJoin })).key));
+  document.querySelectorAll("[data-fr-levels]").forEach(b => b.onclick = () => showBeaten(b.dataset.frLevels));
 }
+// a friend's beaten Level Maker levels (newest first, last 50)
+async function showBeaten(uid) {
+  el("flvTitle").textContent = "🏁 Levels beaten"; el("flvList").innerHTML = "<div class='muted small'>Loading…</div>"; el("flvModal").style.display = "flex";
+  try {
+    const r = await api("friendLevels", { uid });
+    el("flvTitle").textContent = `🏁 Levels ${r.username} has beaten`;
+    el("flvList").innerHTML = r.beaten.length ? r.beaten.map(x => `<div class="mkRow"><span><b>${esc(x.n)}</b> <span class="muted small">${x.by ? "by " + esc(x.by) + " · " : ""}${new Date(x.at).toLocaleDateString()}</span></span></div>`).join("")
+      : `<div class='muted'>${esc(r.username)} hasn't beaten any made levels yet.</div>`;
+  } catch (e) { el("flvList").innerHTML = `<div class='muted'>${esc(e.message)}</div>`; }
+}
+el("flvClose").onclick = () => { el("flvModal").style.display = "none"; };
 function friendBadge(requests, unread) {
   el("friendBadge").textContent = requests + unread ? `(${requests + unread})` : "";
 }

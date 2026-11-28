@@ -526,3 +526,26 @@ body.u3 .announceBtn.active { background: #f2c14e; color: #1b1500; }
 #arLines .row { margin: 4px 0; }
 #arLines input.sec { width: 70px; flex: none; }
 #arLines input.sec { flex: 0 0 70px; width: 70px; }
+/* Level Maker timeline */
+.mkTimeline { display: flex; flex-direction: column; gap: 6px; }
+#tlCanvas { width: 100%; height: auto; border-radius: 10px; touch-action: none; cursor: pointer; background: #11141b; }
+#tlBox .row { flex-wrap: wrap; }
+#tlBox input[type=color] { width: 48px; height: 32px; padding: 0; border: 0; background: none; flex: none; }
+
+/* flashing lights warning before every made level */
+#epiModal { display: none; position: fixed; inset: 0; background: #000d; z-index: 40; align-items: center; justify-content: center; }
+#epiModal .box { background: #1a1c1f; border: 2px solid #ffb300; border-radius: 10px; padding: 22px 26px; width: 560px; max-width: 94vw; display: flex; flex-direction: column; gap: 10px; }
+#epiModal h2 { margin: 0; color: #ffd54f; }
+#epiModal p { margin: 0; }
+#epiModal .chk input { width: auto; margin-right: 8px; }
+#flvModal { display: none; position: fixed; inset: 0; background: #000c; z-index: 30; align-items: center; justify-content: center; }
+#flvModal .box { background: #1a1c1f; border: 1px solid #2a2d31; border-radius: 10px; padding: 20px 24px; width: 520px; max-width: 94vw; max-height: 86vh; display: flex; flex-direction: column; gap: 10px; }
+#flvModal .mkList { max-height: 60vh; overflow-y: auto; }
+
+/* Level Maker tutorial (spotlight tour) */
+#mtShade { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 60; }
+#mtSpot { display: none; position: fixed; z-index: 61; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(0,0,0,.72); outline: 3px solid #ffd54f; pointer-events: none; transition: all .18s ease; }
+#mtCard { display: none; position: fixed; z-index: 62; background: #1e2129; border: 2px solid #ffd54f; border-radius: 12px; padding: 16px 18px; box-shadow: 0 10px 40px #000a; font-size: 14.5px; line-height: 1.45; }
+#mtCard .mtTop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+#mtCard .mtTop b { font-size: 17px; color: #ffd54f; }
+#mtCard .mtNav { margin-top: 12px; gap: 8px; }

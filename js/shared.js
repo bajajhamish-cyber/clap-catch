@@ -495,19 +495,22 @@ function unb64(s) { return typeof atob === "function" ? decodeURIComponent(escap
 //  Code format: { v:2, n:name, p:[[x,y]..] dots, a:[next dot or -1 for each dot], st:start dot,
 //    e:[{ n,x,y, m:[[x,y]..] path, ms:speed, r:ms between shots, wh:% white, a:"you"|"rand"|"pat", pt:[dot..], t:[[sec,text]..] }],
 //    k: white catches to win (0 = survive instead), w: seconds to survive, l: lives, sp: ball speed, i: intro line }
-const ARENA = { GX: 48, GY: 30, DOTS: 16, ENEMIES: 6, WPTS: 6, LINES: 4, LINE_MAX: 60, PAT: 12, CLEAR: 2,
-  LIMITS: { k: [0, 30], w: [10, 300], l: [1, 5], sp: [0.6, 1.6], ms: [0, 8], r: [500, 6000], wh: [0, 100] } };
+const ARENA = { GX: 48, GY: 30, DOTS: 16, ENEMIES: 6, WPTS: 6, LINE_MAX: 60, PAT: 12, CLEAR: 2,
+  PHASES: 3, MAX_SEC: 120, MIN_PHASE: 5, SAYS: 16, FX: 16, TR: ["none", "fade", "left", "right", "up", "down"], TR_MS: 1000,
+  LIMITS: { k: [0, 30], l: [1, 5], sp: [0.6, 1.6], ms: [0, 8], r: [500, 6000], wh: [0, 100], fxMs: [100, 2000], fxStr: [1, 10] } };
 const arenaPx = (x, y) => [x * 20, 20 + y * 20];
 function segDist(p, a, b) {                  // distance from point p to the line a-b (grid squares)
   const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
   const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
   return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
 }
-function arenaClean(x) {
+const arTxt = (s, n) => String(s || "").replace(/[<>&"]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
+const arInt = (v, lo, hi, d) => Math.round(lmClamp(v, [lo, hi], d));
+// one phase: its dots, arrows, start dot and enemies
+function arenaPhaseClean(x) {
   x = x && typeof x === "object" ? x : {};
-  const A = ARENA, L = A.LIMITS, int = (v, lo, hi, d) => Math.round(lmClamp(v, [lo, hi], d));
+  const A = ARENA, L = A.LIMITS, int = arInt;
   const pt = q => Array.isArray(q) ? [int(q[0], 0, A.GX, 0), int(q[1], 0, A.GY, 0)] : null;
-  const txt = (s, n) => String(s || "").replace(/[<>&"]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
   const dots = [];
   (Array.isArray(x.p) ? x.p : []).slice(0, A.DOTS).forEach(q => { const d = pt(q); if (d && dots.every(o => Math.hypot(o[0] - d[0], o[1] - d[1]) >= 1.5)) dots.push(d); });
   if (!dots.length) dots.push([6, 15]);
@@ -526,15 +529,51 @@ function arenaClean(x) {
     }
     const aim = ["you", "rand", "pat"].includes(e.a) ? e.a : "you";
     const pat = (Array.isArray(e.pt) ? e.pt : []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < dots.length).slice(0, A.PAT);
-    enemies.push({ n: txt(e.n, 16) || "Enemy " + (enemies.length + 1), x: at[0], y: at[1], m: path.slice(1), ms: Math.round(lmClamp(e.ms, L.ms, 3) * 10) / 10,
-      r: int(e.r, L.r[0], L.r[1], 2000), wh: int(e.wh, 0, 100, 40), a: aim === "pat" && !pat.length ? "you" : aim, pt: aim === "pat" ? pat : [],
-      t: (Array.isArray(e.t) ? e.t : []).slice(0, A.LINES).map(l => Array.isArray(l) ? [int(l[0], 0, 600, 0), txt(l[1], A.LINE_MAX)] : null).filter(l => l && l[1]) });
+    enemies.push({ n: arTxt(e.n, 16) || "Enemy " + (enemies.length + 1), x: at[0], y: at[1], m: path.slice(1), ms: Math.round(lmClamp(e.ms, L.ms, 3) * 10) / 10,
+      r: int(e.r, L.r[0], L.r[1], 2000), wh: int(e.wh, 0, 100, 40), a: aim === "pat" && !pat.length ? "you" : aim, pt: aim === "pat" ? pat : [] });
   });
-  if (!enemies.length) enemies.push({ n: "Enemy 1", x: 40, y: 15, m: [], ms: 0, r: 2000, wh: 40, a: "you", pt: [], t: [] });
+  if (!enemies.length) enemies.push({ n: "Enemy 1", x: 40, y: 15, m: [], ms: 0, r: 2000, wh: 40, a: "you", pt: [] });
   if (!clear([enemies[0].x, enemies[0].y])) { enemies[0].x = 46; enemies[0].y = 2; }
-  return { v: 2, n: txt(x.n, LMAKER.NAME_MAX) || "Custom level", p: dots, a: next, st: int(x.st, 0, dots.length - 1, 0), e: enemies,
-    k: int(x.k, 0, 30, 5), w: int(x.w, 10, 300, 45), l: int(x.l, 1, 5, 3), sp: Math.round(lmClamp(x.sp, L.sp, 1) * 100) / 100, i: txt(x.i, A.LINE_MAX) };
+  return { d: 0, tr: ARENA.TR.includes(x.tr) ? x.tr : "none", p: dots, a: next, st: int(x.st, 0, dots.length - 1, 0), e: enemies };
 }
+// the whole level. Format: { v:2, n:name, k: white catches to win (0 = survive to the end), l: lives, sp: ball speed, i: intro line,
+//   ph: [ up to 3 phases { d: seconds, tr: transition into it, p, a, st, e } ] (all phases together: 120 seconds at most),
+//   say: [[second, who (0 = no one / 1-6 = enemy in that phase), text]], fx: [[second, "f" flash | "s" shake, ms, strength 1-10, flash colour]] }
+function arenaClean(x) {
+  x = x && typeof x === "object" ? x : {};
+  const A = ARENA, L = A.LIMITS, int = arInt;
+  let phases;
+  if (Array.isArray(x.ph) && x.ph.length) phases = x.ph.slice(0, A.PHASES).map(q => Object.assign(arenaPhaseClean(q), { d: lmClamp(q && q.d, [A.MIN_PHASE, A.MAX_SEC], 30) }));
+  else phases = [Object.assign(arenaPhaseClean(x), { d: x.k === 0 || (x.k == null && x.w) ? lmClamp(x.w, [10, A.MAX_SEC], 45) : 60 })];   // an older one-phase level
+  phases.forEach(q => { q.d = Math.round(q.d); });
+  let total = 0;                                  // 120 seconds at most: later phases are cut short, or dropped
+  phases = phases.filter(q => { if (total + A.MIN_PHASE > A.MAX_SEC) return false; q.d = Math.min(q.d, A.MAX_SEC - total); total += q.d; return true; });
+  phases[0].tr = "none";
+  const end = total, starts = []; phases.reduce((s, q) => { starts.push(s); return s + q.d; }, 0);
+  const phaseAt = t => { let i = 0; while (i + 1 < starts.length && t >= starts[i + 1]) i++; return i; };
+  const sec = v => Math.round(lmClamp(v, [0, end], 0) * 10) / 10;
+  // speech: the old per-enemy lines become timeline lines
+  let says = Array.isArray(x.say) ? x.say : [];
+  if (!Array.isArray(x.ph)) (Array.isArray(x.e) ? x.e : []).forEach((e, i) => (e && Array.isArray(e.t) ? e.t : []).forEach(l => says.push([l && l[0], i + 1, l && l[1]])));
+  says = says.filter(Array.isArray).map(l => [sec(l[0]), int(l[1], 0, A.ENEMIES, 0), arTxt(l[2], A.LINE_MAX)]).filter(l => l[2] && l[0] < end)
+    .map(l => { if (l[1] > phases[phaseAt(l[0])].e.length) l[1] = 0; return l; })
+    .sort((a, b) => a[0] - b[0]).slice(0, A.SAYS);
+  // flashes and shakes: never two at once, and flashes at most 3 a second
+  const fx = []; let busyUntil = -1, lastFlash = -9;
+  (Array.isArray(x.fx) ? x.fx : []).filter(Array.isArray).map(f => [sec(f[0]), f[1] === "s" ? "s" : "f", int(f[2], L.fxMs[0], L.fxMs[1], 400), int(f[3], 1, 10, 5),
+    /^#[0-9a-f]{6}$/i.test(f[4]) ? f[4].toLowerCase() : "#ffffff"]).sort((a, b) => a[0] - b[0]).forEach(f => {
+      if (fx.length >= A.FX || f[0] >= end || f[0] < busyUntil || (f[1] === "f" && f[0] - lastFlash < 0.34)) return;
+      f[2] = Math.min(f[2], Math.round((end - f[0]) * 1000)); busyUntil = f[0] + f[2] / 1000; if (f[1] === "f") lastFlash = f[0];
+      if (f[1] === "s") f.length = 4;
+      fx.push(f);
+    });
+  return { v: 2, n: arTxt(x.n, LMAKER.NAME_MAX) || "Custom level", k: int(x.k, 0, 30, 5), l: int(x.l, 1, 5, 3), sp: Math.round(lmClamp(x.sp, L.sp, 1) * 100) / 100,
+    i: arTxt(x.i, A.LINE_MAX), ph: phases, say: says, fx };
+}
+// when each phase starts (seconds), and which phase is on at a time (seconds)
+function arenaStarts(A) { const s = []; A.ph.reduce((t, q) => { s.push(t); return t + q.d; }, 0); return s; }
+function arenaEnd(A) { return A.ph.reduce((t, q) => t + q.d, 0); }
+function arenaPhaseAt(A, sec) { const s = arenaStarts(A); let i = 0; while (i + 1 < s.length && sec >= s[i + 1]) i++; return i; }
 // where an enemy is after ms milliseconds: walks its path and back again (ping-pong)
 function arenaPos(e, ms) {
   const pts = [[e.x, e.y], ...(e.m || [])];
@@ -551,7 +590,7 @@ function levelFromCode(code) {        // null if it isn't a real level code
   try {
     code = String(code || "").trim();
     // a real code ends in ".signature": the server signs every level you save, so only paid-for levels work
-    const m = /^CC4-([A-Za-z0-9_-]{8,6000})(?:\.([A-Za-z0-9_-]{16,64}))?$/.exec(code); if (!m) return null;
+    const m = /^CC4-([A-Za-z0-9_-]{8,14000})(?:\.([A-Za-z0-9_-]{16,64}))?$/.exec(code); if (!m) return null;
     const raw = m[1].replace(/-/g, "+").replace(/_/g, "/");
     const x = JSON.parse(unb64(raw + "===".slice((raw.length + 3) % 4)));
     const out = x && x.v === 2 ? (d => ({ data: d, cfg: { type: "arena", custom: d.n, arena: d } }))(arenaClean(x)) : levelClean(x);
